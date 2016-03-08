@@ -5,6 +5,22 @@ namespace Di;
 class Factory
 {
     /**
+     * @var Config
+     */
+    protected $config;
+
+    /**
+     * Factory constructor.
+     */
+    public function __construct()
+    {
+        $config = new Config();
+        $config->init();
+
+        $this->config = $config;
+    }
+
+    /**
      * Get the requested class with DI applied.
      *
      * @param string $className
@@ -94,45 +110,108 @@ class Factory
         $mergedParams = [];
         /** Start by looping through all ReflectionParameters. */
         foreach ($reflectionParameters as $reflectionParameter) {
-            /** Get the parameter's name. */
-            $name = $reflectionParameter->getName();
-
             /**
              * If an argument is given with the same name as the ReflectionParameter's name. Add the argument to the
              * array instead.
              */
-            if (isset($givenArguments[$name])) {
-                $mergedParams[$name] = $givenArguments[$name];
+            if (isset($givenArguments[$reflectionParameter->getName()])) {
+                $mergedParams[$reflectionParameter->getName()] = $givenArguments[$reflectionParameter->getName()];
                 continue;
             }
 
-            /** Get the ReflectionType for the given parameter. */
-            $type = $reflectionParameter->getType();
-
-            /** If the type is an auto-loadable class, add it to the array. */
-            if (class_exists($type)) {
-                $mergedParams[$reflectionParameter->getName()] = $reflectionParameter->getType();
-                continue;
-            }
-
-            /** Otherwise, if it has a default value, add it to the array. */
-            if ($reflectionParameter->isDefaultValueAvailable()) {
-                $mergedParams[$reflectionParameter->getName()] = $reflectionParameter->getDefaultValue();
-                continue;
-            }
-
-            /**
-             * N.B. If the ReflectionParameter is not an auto-loadable class and has no default value, it will not be
-             * added to the array. What this means is, that unless the calling function has supplied it in the
-             * givenArguments array, it will lead to an error later on when the class is instantiated with insufficient
-             * parameters.
-             */
-            throw new Exception(
-                "Parameter {$name} cannot be autoloaded, has no default value and was not given as an argument."
-            );
+            $mergedParams[$reflectionParameter->getName()] = $this->getParameter($reflectionParameter);
         }
 
         return $mergedParams;
+    }
+
+    /**
+     * @param \ReflectionParameter $reflectionParameter
+     *
+     * @return false|mixed|\ReflectionType|string
+     * @throws Exception
+     */
+    protected function getParameter(\ReflectionParameter $reflectionParameter)
+    {
+        /** Get the parameter's name. */
+        $name = $reflectionParameter->getName();
+
+        /** Get the ReflectionType for the given parameter. */
+        $type = $reflectionParameter->getType();
+
+        /** If the type is an auto-loadable class, add it to the array. */
+        if (class_exists($type)) {
+            /** Process any rewrites that may have been set in the config. */
+            return $this->processRewrites($type);
+        }
+
+        /** If this parameter has a default value specified in the DI config, add that to the array */
+        $defaultDiValue = $this->getDefaultDiValue($reflectionParameter);
+        if ($defaultDiValue) {
+            return $defaultDiValue;
+        }
+
+        /** Otherwise, if it has a default value in the function definition, add gthat to the array. */
+        if ($reflectionParameter->isDefaultValueAvailable()) {
+            return $reflectionParameter->getDefaultValue();
+        }
+
+        /**
+         * N.B. If the ReflectionParameter is not an auto-loadable class and has no default value, it will not be
+         * added to the array. What this means is, that unless the calling function has supplied it in the
+         * givenArguments array, it will lead to an error later on when the class is instantiated with insufficient
+         * parameters.
+         */
+        throw new Exception(
+            "Parameter {$name} cannot be autoloaded, has no default value and was not given as an argument."
+        );
+    }
+
+    /**
+     * Process any rewrites found in the DI config.
+     *
+     * @param \ReflectionType $type
+     *
+     * @return \ReflectionType|string
+     */
+    protected function processRewrites(\ReflectionType $type)
+    {
+        /** Get the type's class name and make sure it starts in the root namespace. */
+        $stringType = (string) $type;
+        if (strpos($stringType, '\\') !== 0) {
+            $stringType = '\\' . $stringType;
+        }
+
+        /** Check for any rewrites and return the rewritten class name if available. */
+        if (isset($this->config->rewrites[$stringType])) {
+            $type = $this->config->rewrites[$stringType];
+        }
+
+        return $type;
+    }
+
+    /**
+     * Try to find a default value for this parameter from the DI config.
+     *
+     * @param \ReflectionParameter $reflectionParameter
+     *
+     * @return mixed|false
+     */
+    protected function getDefaultDiValue(\ReflectionParameter $reflectionParameter)
+    {
+        /** Get the parameter's declaring class' class name and make sure it starts in the root namespace. */
+        $className = $reflectionParameter->getDeclaringClass()->getName();
+        if (strpos($className, '\\') !== 0) {
+            $className = '\\' . $className;
+        }
+
+        /** Check if a default value is defined for this parameter and return it. */
+        $defaultValues = $this->config->defaultValues;
+        if (isset($defaultValues[$className][$reflectionParameter->getName()])) {
+            return $defaultValues[$className][$reflectionParameter->getName()];
+        }
+
+        return false;
     }
 
     /**
@@ -150,7 +229,7 @@ class Factory
              * If the parameter can be autoloaded, do so using this class' getter. This way we can recursively inject
              * dependencies.
              */
-            if ($parameter instanceof \ReflectionType) {
+            if ($parameter instanceof \ReflectionType || class_exists($parameter)) {
                 $mergedParameters[$name] = $this->get($parameter);
             }
         }
