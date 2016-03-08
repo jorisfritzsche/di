@@ -10,7 +10,7 @@ Install the latest version with
 
 ```bash
 
-$ composer require tig-jorisfritzsche/di
+$ composer require jorisfritzsche/di
 ```
 
 ## Basic usage
