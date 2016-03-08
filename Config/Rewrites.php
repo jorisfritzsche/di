@@ -14,7 +14,7 @@ class Rewrites extends AbstractConfig
      */
     public function addRewrite(array $rewrite)
     {
-        $this->config = array_merge_recursive($this->config, $rewrite);
+        $this->config = array_merge_recursive($this->data, $rewrite);
 
         return $this;
     }
@@ -35,8 +35,8 @@ class Rewrites extends AbstractConfig
         }
 
         /** Check for any rewrites and return the rewritten class name if available. */
-        if (isset($this->config[$stringType])) {
-            $type = $this->config[$stringType];
+        if (isset($this->data[$stringType])) {
+            $type = $this->data[$stringType];
         }
 
         return $type;

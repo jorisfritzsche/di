@@ -14,11 +14,11 @@ class DefaultValues extends AbstractConfig
      */
     public function addDefaultValue(string $className, array $defaultValue)
     {
-        if (isset($this->config[$className])) {
-            $defaultValue = array_merge($this->config[$className], $defaultValue);
+        if (isset($this->data[$className])) {
+            $defaultValue = array_merge($this->data[$className], $defaultValue);
         }
 
-        $this->config[$className] = $defaultValue;
+        $this->data[$className] = $defaultValue;
         return $this;
     }
 
@@ -38,7 +38,7 @@ class DefaultValues extends AbstractConfig
         }
 
         /** Check if a default value is defined for this parameter and return it. */
-        $defaultValues = $this->config;
+        $defaultValues = $this->data;
         if (isset($defaultValues[$className][$reflectionParameter->getName()])) {
             return $defaultValues[$className][$reflectionParameter->getName()];
         }

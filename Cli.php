@@ -231,6 +231,12 @@ USAGE;
      */
     protected function addRewrite()
     {
+        $configPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR;
+        /** @noinspection PhpIncludeInspection */
+        require_once($configPath . 'AbstractConfig.php');
+        /** @noinspection PhpIncludeInspection */
+        require_once($configPath . 'Rewrites.php');
+
         $rewrite = $this->addRewrite;
 
         $config = new Config\Rewrites;
@@ -242,6 +248,12 @@ USAGE;
      */
     protected function addDefaultValue()
     {
+        $configPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR;
+        /** @noinspection PhpIncludeInspection */
+        require_once($configPath . 'AbstractConfig.php');
+        /** @noinspection PhpIncludeInspection */
+        require_once($configPath . 'DefaultValues.php');
+
         $defaultValue = $this->addDefaultValue;
         $config = new Config\DefaultValues();
         foreach ($defaultValue as $className => $parameters) {
