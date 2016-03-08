@@ -30,7 +30,7 @@ abstract class AbstractConfig
      */
     protected function getConfigFile() : string
     {
-        $file = dirname(dirname(__FILE__))
+        $file = dirname(dirname(dirname(dirname(__FILE__))))
             . DIRECTORY_SEPARATOR
             . static::CONFIG_DIR
             . DIRECTORY_SEPARATOR

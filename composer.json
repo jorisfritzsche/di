@@ -8,7 +8,7 @@
     "type": "",
     "autoload": {
         "psr-4": {
-            "Di\\": ""
+            "Di\\": "src/Di"
         }
     },
     "version": "0.1.0",

@@ -29,7 +29,7 @@ abstract class AbstractCache
      */
     public function __construct()
     {
-        $this->cacheDir = dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . static::CACHE_DIR;
+        $this->cacheDir = dirname(dirname(dirname(dirname(__FILE__)))) . DIRECTORY_SEPARATOR . static::CACHE_DIR;
         $this->cacheFile = static::CACHE_FILE;
 
         $this->init();
