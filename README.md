@@ -3,6 +3,8 @@ DI allows you to load classes with dependency injection. DI will automatically c
 
 DI allows for class rewriting as well as pre-defined scalar default values.
 
+**As the name might suggest; this is a personal experiment. It is not recommended to use this for anything important**
+
 ## Installation
 Install the latest version with
 
