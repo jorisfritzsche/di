@@ -142,11 +142,11 @@ class Factory
         /** If the type is an auto-loadable class, add it to the array. */
         if (class_exists($type)) {
             /** Process any rewrites that may have been set in the config. */
-            return $this->processRewrites($type);
+            return $this->config->processRewrites($type);
         }
 
         /** If this parameter has a default value specified in the DI config, add that to the array */
-        $defaultDiValue = $this->getDefaultDiValue($reflectionParameter);
+        $defaultDiValue = $this->config->getDefaultDiValue($reflectionParameter);
         if ($defaultDiValue) {
             return $defaultDiValue;
         }
@@ -165,53 +165,6 @@ class Factory
         throw new Exception(
             "Parameter {$name} cannot be autoloaded, has no default value and was not given as an argument."
         );
-    }
-
-    /**
-     * Process any rewrites found in the DI config.
-     *
-     * @param \ReflectionType $type
-     *
-     * @return \ReflectionType|string
-     */
-    protected function processRewrites(\ReflectionType $type)
-    {
-        /** Get the type's class name and make sure it starts in the root namespace. */
-        $stringType = (string) $type;
-        if (strpos($stringType, '\\') !== 0) {
-            $stringType = '\\' . $stringType;
-        }
-
-        /** Check for any rewrites and return the rewritten class name if available. */
-        if (isset($this->config->rewrites[$stringType])) {
-            $type = $this->config->rewrites[$stringType];
-        }
-
-        return $type;
-    }
-
-    /**
-     * Try to find a default value for this parameter from the DI config.
-     *
-     * @param \ReflectionParameter $reflectionParameter
-     *
-     * @return mixed|false
-     */
-    protected function getDefaultDiValue(\ReflectionParameter $reflectionParameter)
-    {
-        /** Get the parameter's declaring class' class name and make sure it starts in the root namespace. */
-        $className = $reflectionParameter->getDeclaringClass()->getName();
-        if (strpos($className, '\\') !== 0) {
-            $className = '\\' . $className;
-        }
-
-        /** Check if a default value is defined for this parameter and return it. */
-        $defaultValues = $this->config->defaultValues;
-        if (isset($defaultValues[$className][$reflectionParameter->getName()])) {
-            return $defaultValues[$className][$reflectionParameter->getName()];
-        }
-
-        return false;
     }
 
     /**
