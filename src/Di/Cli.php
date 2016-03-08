@@ -200,7 +200,7 @@ class Cli
         $this->output("Outputting current version.");
 
         /** Get the composer.json file and parse it to find the current package's version. */
-        $composerJson = file_get_contents(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'composer.json');
+        $composerJson = file_get_contents(dirname(dirname(dirname(__FILE__))) . DIRECTORY_SEPARATOR . 'composer.json');
         $composerJson = json_decode($composerJson, true);
         $this->output("Version parsed from composer.json: {$composerJson['version']}");
 
@@ -212,7 +212,6 @@ class Cli
      */
     protected function showVersion()
     {
-        $this->output("Output:");
         echo <<<VERSION
   ____ ___    ____ _     ___
  |  _ \_ _|  / ___| |   |_ _|
@@ -230,14 +229,8 @@ VERSION;
      */
     protected function help()
     {
+        $this->showVersion();
         echo <<<USAGE
-  ____ ___    ____ _     ___
- |  _ \_ _|  / ___| |   |_ _|
- | | | | |  | |   | |    | |
- | |_| | |  | |___| |___ | |
- |____/___|  \____|_____|___|
-
-\033[32mDI CLI\033[0m version \033[33m{$this->getCurrentVersion()}\033[0m by \033[32mJoris Fritzsche.\033[0m
 
 \033[33mOptions:\033[0m
   \033[32m-h, --help\033[0m             Display this help message.
@@ -257,8 +250,6 @@ USAGE;
      */
     protected function addRewrite()
     {
-        $this->loadClasses(['Config\\AbstractConfig', 'Config\\Rewrites']);
-
         $rewrite = $this->addRewrite;
 
         $config = new Config\Rewrites;
@@ -271,8 +262,6 @@ USAGE;
      */
     protected function addDefaultValue()
     {
-        $this->loadClasses(['Config\\AbstractConfig', 'Config\\DefaultValues']);
-
         $defaultValue = $this->addDefaultValue;
         $config = new Config\DefaultValues();
         foreach ($defaultValue as $className => $parameters) {
@@ -289,11 +278,11 @@ USAGE;
      */
     protected function setEnv()
     {
-        $this->loadClasses(['Config\\AbstractConfig', 'Config\\Environments', 'Config\\Application']);
-
         $env = $this->setEnv;
+
         $config = new Config\Application();
         $config->setEnv($env);
+        $config->saveConfig();
     }
 
     /**
@@ -303,8 +292,6 @@ USAGE;
      */
     protected function clearCache()
     {
-        $this->loadClasses(['Config\\AbstractConfig', 'Config\\Caches', 'Cache\\AbstractCache']);
-
         $config = new Config\Caches();
 
         $cachesToClear = $this->clearCaches;
@@ -335,7 +322,6 @@ USAGE;
         }
 
         $className = $config->data[$cacheType];
-        $this->loadClasses([$className]);
 
         /** @var \Di\Cache\AbstractCache $cacheToClear */
         $cacheToClear = new $className;
@@ -348,8 +334,6 @@ USAGE;
      */
     protected function clearConfig()
     {
-        $this->loadClasses(['Config\\AbstractConfig', 'Config\\Configs']);
-
         $config = new Config\Configs();
 
         $configsToClear = $this->clearConfig;
@@ -380,7 +364,6 @@ USAGE;
         }
 
         $className = $config->data[$configType];
-        $this->loadClasses([$className]);
 
         /** @var \Di\Config\AbstractConfig $configToClear */
         $configToClear = new $className;
@@ -388,27 +371,6 @@ USAGE;
         $configToClear->data = new \StdClass();
         $configToClear->saveConfig();
         $this->output("Config type cleared: " . $configType);
-    }
-
-    /**
-     * Load the specified class files. This is required for the CLI, since the autloader will not be available.
-     *
-     * @todo move to custom CLI autoloader.
-     *
-     * @param array $classes
-     */
-    protected function loadClasses(array $classes)
-    {
-        $root = dirname(__FILE__) . DIRECTORY_SEPARATOR;
-        foreach ($classes as $class) {
-            $this->output("Loading class: $class");
-
-            $class = str_replace(['\\Di', 'Di'], '', $class);
-            $file = str_replace('\\', DIRECTORY_SEPARATOR, $class) . '.php';
-
-            /** @noinspection PhpIncludeInspection */
-            require_once($root . $file);
-        }
     }
 
     /**

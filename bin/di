@@ -5,19 +5,34 @@ error_reporting(E_ALL);
 ini_set('display_errors', true);
 
 try {
-    /** @noinspection PhpIncludeInspection */
-    require_once(
-        dirname(
-            dirname(__FILE__)
-        )
-        . DIRECTORY_SEPARATOR
-        . 'src'
-        . DIRECTORY_SEPARATOR
-        . 'Di'
-        . DIRECTORY_SEPARATOR
-        . 'Cli.php'
-    );
+    /**
+     * Custom autoloader for the DI CLI. N.B. only works for native PHP and DI classes.
+     *
+     * @param string $className
+     */
+    function diCliAutoload(string $className) {
+        $src = dirname(
+                dirname(__FILE__)
+            )
+            . DIRECTORY_SEPARATOR
+            . 'src'
+            . DIRECTORY_SEPARATOR
+            . 'Di'
+            . DIRECTORY_SEPARATOR;
 
+        $className = str_replace(['\\Di', 'Di'], '', $className);
+        $file = str_replace('\\', DIRECTORY_SEPARATOR, $className) . '.php';
+
+        /** @noinspection PhpIncludeInspection */
+        require_once($src . $file);
+    }
+
+    /** Register the autoloader. */
+    spl_autoload_register('diCliAutoload');
+
+    /**
+     * Instantiate the CLI and execute the operation.
+     */
     $cli = new \Di\Cli();
     $cli->execute();
     $cli->output("Operation completed.", true);
