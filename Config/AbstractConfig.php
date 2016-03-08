@@ -28,7 +28,7 @@ abstract class AbstractConfig
     /**
      * @return string
      */
-    protected function getConfigFile()
+    protected function getConfigFile() : string
     {
         $file = dirname(dirname(__FILE__))
             . DIRECTORY_SEPARATOR
@@ -42,7 +42,7 @@ abstract class AbstractConfig
     /**
      * @return string[]
      */
-    protected function getConfigJson()
+    protected function getConfigJson() : array
     {
         $file = $this->getConfigFile();
         $config = [];
@@ -60,9 +60,9 @@ abstract class AbstractConfig
      *
      * Please note: this overwrites the actual config file, not the cache!
      *
-     * @return $this
+     * @return self
      */
-    public function saveConfig()
+    public function saveConfig() : self
     {
         $file = $this->getConfigFile();
 

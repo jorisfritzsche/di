@@ -10,9 +10,9 @@ class DefaultValues extends AbstractConfig
      * @param string $className
      * @param array  $defaultValue
      *
-     * @return $this
+     * @return self
      */
-    public function addDefaultValue(string $className, array $defaultValue)
+    public function addDefaultValue(string $className, array $defaultValue) : self
     {
         if (isset($this->data[$className])) {
             $defaultValue = array_merge($this->data[$className], $defaultValue);

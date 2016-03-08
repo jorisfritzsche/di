@@ -65,9 +65,9 @@ abstract class AbstractCache
      *
      * @param string $key
      * @param $data
-     * @return $this
+     * @return self
      */
-    public function store(string $key, $data)
+    public function store(string $key, $data) : self
     {
         if (is_array($data)) {
             array_walk_recursive(
@@ -101,9 +101,9 @@ abstract class AbstractCache
     /**
      * Save the cache. This method is automatically called when this instance is destroyed.
      *
-     * @return $this
+     * @return self
      */
-    public function save()
+    public function save() : self
     {
         $jsonData = json_encode($this->data);
         file_put_contents($this->cacheDir . $this->cacheFile, $jsonData);
@@ -115,9 +115,9 @@ abstract class AbstractCache
      * Clear the cache.
      *
      * @param bool $immediate
-     * @return $this
+     * @return self
      */
-    public function clear($immediate = false)
+    public function clear($immediate = false) : self
     {
         $this->data = new \StdClass;
 

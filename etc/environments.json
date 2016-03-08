@@ -1,0 +1,12 @@
+{
+    "development": {
+        "cache": false,
+        "debug_logging": true,
+        "exception_logging": true
+    },
+    "production": {
+        "cache": true,
+        "debug_logging": false,
+        "exception_logging": true
+    }
+}

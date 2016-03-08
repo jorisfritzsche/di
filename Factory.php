@@ -127,7 +127,7 @@ class Factory
      *
      * @return \ReflectionClass
      */
-    protected function getReflector(string $className)
+    protected function getReflector(string $className) : \ReflectionClass
     {
         return new \ReflectionClass($className);
     }
@@ -137,7 +137,7 @@ class Factory
      *
      * @return \ReflectionMethod|null
      */
-    protected function getConstructor(\ReflectionClass $reflector)
+    protected function getConstructor(\ReflectionClass $reflector) : \ReflectionMethod
     {
         return $reflector->getConstructor();
     }
@@ -146,7 +146,7 @@ class Factory
      * @param \ReflectionMethod $reflectionMethod
      * @return string[]
      */
-    protected function getMethodParams(\ReflectionMethod $reflectionMethod)
+    protected function getMethodParams(\ReflectionMethod $reflectionMethod) : array
     {
         $parameters = $reflectionMethod->getParameters();
 
@@ -166,7 +166,7 @@ class Factory
      *
      * @throws Exception
      */
-    protected function mergeParams(array $reflectionParameters, array $givenArguments)
+    protected function mergeParams(array $reflectionParameters, array $givenArguments) : array
     {
         /** Create an array of parameters. */
         $mergedParams = [];
@@ -237,7 +237,7 @@ class Factory
      *
      * @throws Exception
      */
-    protected function loadParameters(array $mergedParameters)
+    protected function loadParameters(array $mergedParameters) : array
     {
         /** Loop through all parameters and load them if possible. */
         foreach ($mergedParameters as $name => $parameter) {

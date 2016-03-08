@@ -30,6 +30,11 @@ class Cli
     protected $addDefaultValue;
 
     /**
+     * @var string
+     */
+    protected $setEnv;
+
+    /**
      * @var array
      */
     protected $clearCaches;
@@ -55,6 +60,7 @@ class Cli
                 'version',
                 'add-rewrite:',
                 'add-default-value:',
+                'set-env:',
                 'clear-cache::',
                 'clear-config::',
             ]
@@ -99,6 +105,13 @@ class Cli
             }
 
             $this->addDefaultValue = $defaultValues;
+            return;
+        }
+
+        if (isset($options['set-env'])) {
+            $env = $options['set-env'];
+
+            $this->setEnv = $env;
             return;
         }
 
@@ -162,6 +175,10 @@ class Cli
             $this->addDefaultValue();
         }
 
+        if (!empty($this->setEnv)) {
+            $this->setEnv();
+        }
+
         if ($this->clearCaches) {
             $this->clearCache();
         }
@@ -174,7 +191,7 @@ class Cli
     /**
      * @return string
      */
-    protected function getCurrentVersion()
+    protected function getCurrentVersion() : string
     {
         /** Get the composer.json file and parse it to find the current package's version. */
         $composerJson = file_get_contents(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'composer.json');
@@ -231,11 +248,7 @@ USAGE;
      */
     protected function addRewrite()
     {
-        $configPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR;
-        /** @noinspection PhpIncludeInspection */
-        require_once($configPath . 'AbstractConfig.php');
-        /** @noinspection PhpIncludeInspection */
-        require_once($configPath . 'Rewrites.php');
+        $this->loadClasses(['Config\\AbstractConfig', 'Config\\Rewrites']);
 
         $rewrite = $this->addRewrite;
 
@@ -248,11 +261,7 @@ USAGE;
      */
     protected function addDefaultValue()
     {
-        $configPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR;
-        /** @noinspection PhpIncludeInspection */
-        require_once($configPath . 'AbstractConfig.php');
-        /** @noinspection PhpIncludeInspection */
-        require_once($configPath . 'DefaultValues.php');
+        $this->loadClasses(['Config\\AbstractConfig', 'Config\\DefaultValues']);
 
         $defaultValue = $this->addDefaultValue;
         $config = new Config\DefaultValues();
@@ -264,20 +273,25 @@ USAGE;
     }
 
     /**
+     * Set the application's env parameter.
+     */
+    protected function setEnv()
+    {
+        $this->loadClasses(['Config\\AbstractConfig', 'Config\\Environments', 'Config\\Application']);
+
+        $env = $this->setEnv;
+        $config = new Config\Application();
+        $config->setEnv($env);
+    }
+
+    /**
      * Clear the specified caches.
      *
      * @throws \Exception
      */
     protected function clearCache()
     {
-        $configPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR;
-        $cachePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Cache' . DIRECTORY_SEPARATOR;
-        /** @noinspection PhpIncludeInspection */
-        require_once($configPath . 'AbstractConfig.php');
-        /** @noinspection PhpIncludeInspection */
-        require_once($configPath . 'Caches.php');
-        /** @noinspection PhpIncludeInspection */
-        require_once($cachePath . 'AbstractCache.php');
+        $this->loadClasses(['Config\\AbstractConfig', 'Config\\Caches', 'Cache\\AbstractCache']);
 
         $config = new Config\Caches();
 
@@ -287,9 +301,8 @@ USAGE;
             $cachesToClear = array_keys($config->data);
         }
 
-        $cachePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Cache' . DIRECTORY_SEPARATOR;
         foreach ($cachesToClear as $cacheType) {
-            $this->clearCacheType($config, $cacheType, $cachePath);
+            $this->clearCacheType($config, $cacheType);
         }
     }
 
@@ -298,21 +311,17 @@ USAGE;
      *
      * @param Config\Caches $config
      * @param string $cacheType
-     * @param string $cachePath
+     *
      * @throws \Exception
      */
-    protected function clearCacheType(Config\Caches $config, string $cacheType, string $cachePath)
+    protected function clearCacheType(Config\Caches $config, string $cacheType)
     {
         if (!isset($config->data[$cacheType])) {
             throw new \Exception("Unknown cache type requested: {$cacheType}.");
         }
 
         $className = $config->data[$cacheType];
-        $classNameParts = explode('\\', $className);
-        $fileName = end($classNameParts) . '.php';
-
-        /** @noinspection PhpIncludeInspection */
-        require_once($cachePath . $fileName);
+        $this->loadClasses([$className]);
 
         /** @var \Di\Cache\AbstractCache $cacheToClear */
         $cacheToClear = new $className;
@@ -324,11 +333,7 @@ USAGE;
      */
     protected function clearConfig()
     {
-        $configPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR;
-        /** @noinspection PhpIncludeInspection */
-        require_once($configPath . 'AbstractConfig.php');
-        /** @noinspection PhpIncludeInspection */
-        require_once($configPath . 'Configs.php');
+        $this->loadClasses(['Config\\AbstractConfig', 'Config\\Configs']);
 
         $config = new Config\Configs();
 
@@ -339,7 +344,7 @@ USAGE;
         }
 
         foreach ($configsToClear as $configType) {
-            $this->clearConfigType($config, $configType, $configPath);
+            $this->clearConfigType($config, $configType);
         }
     }
 
@@ -348,26 +353,41 @@ USAGE;
      *
      * @param Config\Configs $config
      * @param string $configType
-     * @param string $configPath
+     *
      * @throws \Exception
      */
-    protected function clearConfigType(Config\Configs $config, string $configType, string $configPath)
+    protected function clearConfigType(Config\Configs $config, string $configType)
     {
         if (!isset($config->data[$configType])) {
             throw new \Exception("Unknown config type requested: {$configType}.");
         }
 
         $className = $config->data[$configType];
-        $classNameParts = explode('\\', $className);
-        $fileName = end($classNameParts) . '.php';
-
-        /** @noinspection PhpIncludeInspection */
-        require_once($configPath . $fileName);
+        $this->loadClasses([$className]);
 
         /** @var \Di\Config\AbstractConfig $configToClear */
         $configToClear = new $className;
 
         $configToClear->data = new \StdClass();
         $configToClear->saveConfig();
+    }
+
+    /**
+     * Load the specified class files. This is required for the CLI, since the autloader will not be available.
+     *
+     * @todo move to custom CLI autoloader.
+     *
+     * @param array $classes
+     */
+    protected function loadClasses(array $classes)
+    {
+        $root = dirname(__FILE__) . DIRECTORY_SEPARATOR;
+        foreach ($classes as $class) {
+            $class = str_replace(['\\Di', 'Di'], '', $class);
+            $file = str_replace('\\', DIRECTORY_SEPARATOR, $class) . '.php';
+
+            /** @noinspection PhpIncludeInspection */
+            require_once($root . $file);
+        }
     }
 }

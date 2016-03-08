@@ -9,9 +9,9 @@ class Caches extends AbstractConfig
     /**
      * @param array $cache
      *
-     * @return $this
+     * @return self
      */
-    public function addCache(array $cache)
+    public function addCache(array $cache) : self
     {
         $this->data = array_merge_recursive($this->data, $cache);
 

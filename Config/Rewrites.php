@@ -10,11 +10,11 @@ class Rewrites extends AbstractConfig
     /**
      * @param array $rewrite
      *
-     * @return $this
+     * @return self
      */
-    public function addRewrite(array $rewrite)
+    public function addRewrite(array $rewrite) : self
     {
-        $this->config = array_merge_recursive($this->data, $rewrite);
+        $this->data = array_merge_recursive($this->data, $rewrite);
 
         return $this;
     }
