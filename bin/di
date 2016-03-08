@@ -6,15 +6,11 @@ ini_set('display_errors', true);
 
 try {
     require_once(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Cli.php');
-    require_once(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Config.php');
 
-    $config = new \Di\Config();
-    $config->init();
-
-    $cli = new \Di\Cli($config);
+    $cli = new \Di\Cli();
     $cli->execute();
 } catch (\Exception $e) {
     echo "\033[31m" . $e->getMessage() . PHP_EOL . PHP_EOL;
-    echo "\e[34mStack trace:" . $e->getTraceAsString();
+    echo "\e[34mStack trace:" . $e->getTraceAsString() . "\033[0m" . PHP_EOL;
 }
 

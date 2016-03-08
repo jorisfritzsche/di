@@ -5,11 +5,6 @@ namespace Di;
 class Cli
 {
     /**
-     * @var Config
-     */
-    protected $config;
-
-    /**
      * @var bool
      */
     protected $help;
@@ -35,6 +30,11 @@ class Cli
     protected $addDefaultValue;
 
     /**
+     * @var array
+     */
+    protected $clearCaches;
+
+    /**
      * @var bool
      */
     protected $clearConfig;
@@ -42,14 +42,10 @@ class Cli
     /**
      * Cli constructor.
      *
-     * @param Config $config
-     *
      * @throws \Exception
      */
-    public function __construct(Config $config)
+    public function __construct()
     {
-        $this->config = $config;
-
         /** This is a list of all available and accepted options. */
         $options = getopt(
             'hv',
@@ -59,7 +55,8 @@ class Cli
                 'version',
                 'add-rewrite:',
                 'add-default-value:',
-                'clear-config',
+                'clear-cache::',
+                'clear-config::',
             ]
         );
 
@@ -70,7 +67,7 @@ class Cli
             $this->verbose = true;
         }
 
-        if (isset($options['h']) || isset($options['help'])) {
+        if (isset($options['h']) || isset($options['help']) || empty($options)) {
             $this->help = true;
             return;
         }
@@ -105,6 +102,18 @@ class Cli
             return;
         }
 
+        if (isset($options['clear-cache'])) {
+            /** get the specified caches to be cleared. If no caches are specified, clear them all. */
+            if (!empty($options['clear-cache'])) {
+                $caches = explode(',', $options['clear-cache']);
+            } else {
+                $caches = true;
+            }
+
+            $this->clearCaches = $caches;
+            return;
+        }
+
         if (isset($options['clear-config'])) {
             /** Prompt the user in order to make sure they know that this action cannot be undone. */
             echo "Are you sure you wish to clear the config? This action cannot be undone! [yN]";
@@ -115,12 +124,19 @@ class Cli
 
             /** If the response is not 'Y' or 'y', abort the operation. */
             if(strcasecmp(trim($line), 'y') !== 0){
-                echo "\e[31mABORTING!" . PHP_EOL;
+                echo "\e[31mABORTING!\033[0m" . PHP_EOL;
                 return;
             }
 
+            /** get the specified configs to be cleared. If no configs are specified, clear them all. */
+            if (!empty($options['clear-config'])) {
+                $configs = explode(',', $options['clear-config']);
+            } else {
+                $configs = true;
+            }
+
             /** Flag the config for clearing. */
-            $this->clearConfig = true;
+            $this->clearConfig = $configs;
             return;
         }
     }
@@ -144,6 +160,10 @@ class Cli
 
         if (!empty($this->addDefaultValue)) {
             $this->addDefaultValue();
+        }
+
+        if ($this->clearCaches) {
+            $this->clearCache();
         }
 
         if ($this->clearConfig) {
@@ -195,11 +215,13 @@ VERSION;
 \033[32mDI CLI\033[0m version \033[33m{$this->getCurrentVersion()}\033[0m by \033[32mJoris Fritzsche.\033[0m
 
 \033[33mOptions:\033[0m
-  \033[32m-h, --help\033[0m             Display this help message
+  \033[32m-h, --help\033[0m             Display this help message.
   \033[32m-v, --verbose\033[0m          Display additional information while performing an action.
-  \033[32m--version\033[0m              Display the current version
-  \033[32m--add-rewrite\033[0m          The shortname used for the extension models and configuration, defaults to lowercase extension (eg. tig_queue)
-  \033[32m--add-default-value\033[0m    The root of the Magento installation, defaults to current working directory, only supports full file path at the moment
+  \033[32m--version\033[0m              Display the current version.
+  \033[32m--add-rewrite\033[0m          Add new rewrites to the config.json file.
+  \033[32m--add-default-value\033[0m    Add new default values to the config.json file.
+  \033[32m--clear-cache\033[0m         Clear the cache files. This operation accepts a comma-separated list of caches to clear. If no caches are specified, all will be cleared.
+  \033[32m--clear-config\033[0m         Clear the config JSON files. Beware: this action cannot be undone. This operation accepts a comma-separated list of configs to clear. If no configs are specified, all will be cleared.
 
 USAGE;
     }
@@ -211,7 +233,8 @@ USAGE;
     {
         $rewrite = $this->addRewrite;
 
-        $this->config->addRewrite($rewrite)->saveConfig();
+        $config = new Config\Rewrites;
+        $config->addRewrite($rewrite)->saveConfig();
     }
 
     /**
@@ -220,21 +243,119 @@ USAGE;
     protected function addDefaultValue()
     {
         $defaultValue = $this->addDefaultValue;
+        $config = new Config\DefaultValues();
         foreach ($defaultValue as $className => $parameters) {
-            $this->config->addDefaultValue($className, $parameters);
+            $config->addDefaultValue($className, $parameters);
         }
 
-        $this->config->saveConfig();
+        $config->saveConfig();
     }
 
     /**
-     * Clears the DI configuration JSON file.
+     * Clear the specified caches.
+     *
+     * @throws \Exception
+     */
+    protected function clearCache()
+    {
+        $configPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR;
+        $cachePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Cache' . DIRECTORY_SEPARATOR;
+        /** @noinspection PhpIncludeInspection */
+        require_once($configPath . 'AbstractConfig.php');
+        /** @noinspection PhpIncludeInspection */
+        require_once($configPath . 'Caches.php');
+        /** @noinspection PhpIncludeInspection */
+        require_once($cachePath . 'AbstractCache.php');
+
+        $config = new Config\Caches();
+
+        $cachesToClear = $this->clearCaches;
+
+        if (!is_array($cachesToClear)) {
+            $cachesToClear = array_keys($config->data);
+        }
+
+        $cachePath = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Cache' . DIRECTORY_SEPARATOR;
+        foreach ($cachesToClear as $cacheType) {
+            $this->clearCacheType($config, $cacheType, $cachePath);
+        }
+    }
+
+    /**
+     * Clear the specified cache.
+     *
+     * @param Config\Caches $config
+     * @param string $cacheType
+     * @param string $cachePath
+     * @throws \Exception
+     */
+    protected function clearCacheType(Config\Caches $config, string $cacheType, string $cachePath)
+    {
+        if (!isset($config->data[$cacheType])) {
+            throw new \Exception("Unknown cache type requested: {$cacheType}.");
+        }
+
+        $className = $config->data[$cacheType];
+        $classNameParts = explode('\\', $className);
+        $fileName = end($classNameParts) . '.php';
+
+        /** @noinspection PhpIncludeInspection */
+        require_once($cachePath . $fileName);
+
+        /** @var \Di\Cache\AbstractCache $cacheToClear */
+        $cacheToClear = new $className;
+        $cacheToClear->clear();
+    }
+
+    /**
+     * Clears the DI configuration JSON files.
      */
     protected function clearConfig()
     {
-        $this->config->rewrites = new \StdClass();
-        $this->config->defaultValues = new \StdClass();
+        $configPath = dirname(__FILE__) . DIRECTORY_SEPARATOR . 'Config' . DIRECTORY_SEPARATOR;
+        /** @noinspection PhpIncludeInspection */
+        require_once($configPath . 'AbstractConfig.php');
+        /** @noinspection PhpIncludeInspection */
+        require_once($configPath . 'Configs.php');
 
-        $this->config->saveConfig();
+        $config = new Config\Configs();
+
+        $configsToClear = $this->clearConfig;
+
+        if (!is_array($configsToClear)) {
+            $configsToClear = array_keys($config->data);
+        }
+
+        foreach ($configsToClear as $configType) {
+            $this->clearConfigType($config, $configType, $configPath);
+        }
+    }
+
+    /**
+     * Clear the specified config.
+     *
+     * @param Config\Configs $config
+     * @param string $configType
+     * @param string $configPath
+     * @throws \Exception
+     */
+    protected function clearConfigType(Config\Configs $config, string $configType, string $configPath)
+    {
+        if (!isset($config->data[$configType])) {
+            throw new \Exception("Unknown config type requested: {$configType}.");
+        }
+
+        $className = $config->data[$configType];
+        $classNameParts = explode('\\', $className);
+        $fileName = end($classNameParts) . '.php';
+
+        /** @noinspection PhpIncludeInspection */
+        require_once($configPath . $fileName);
+
+        /** @var \Di\Config\AbstractConfig $configToClear */
+        $configToClear = new $className;
+
+        $configToClear->data = new \StdClass();
+        $configToClear->saveConfig();
     }
 }

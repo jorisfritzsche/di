@@ -1,0 +1,5 @@
+{
+    "caches": "\\Di\\Config\\Caches",
+    "default_values": "\\Di\\Config\\DefaultValues",
+    "rewrites": "\\Di\\Config\\Rewrites"
+}
