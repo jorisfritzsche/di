@@ -35,6 +35,11 @@ class Cli
     protected $addDefaultValue;
 
     /**
+     * @var bool
+     */
+    protected $clearConfig;
+
+    /**
      * Cli constructor.
      *
      * @param Config $config
@@ -53,10 +58,14 @@ class Cli
                 'verbose',
                 'version',
                 'add-rewrite:',
-                'add-default-value:'
+                'add-default-value:',
+                'clear-config',
             ]
         );
 
+        /**
+         * @todo implement verbose operator as well as debugging options
+         */
         if (isset($options['v']) || isset($options['verbose'])) {
             $this->verbose = true;
         }
@@ -95,6 +104,25 @@ class Cli
             $this->addDefaultValue = $defaultValues;
             return;
         }
+
+        if (isset($options['clear-config'])) {
+            /** Prompt the user in order to make sure they know that this action cannot be undone. */
+            echo "Are you sure you wish to clear the config? This action cannot be undone! [yN]";
+
+            /** Read the response. */
+            $handle = fopen ("php://stdin", "r");
+            $line = fgets($handle);
+
+            /** If the response is not 'Y' or 'y', abort the operation. */
+            if(strcasecmp(trim($line), 'y') !== 0){
+                echo "\e[31mABORTING!" . PHP_EOL;
+                return;
+            }
+
+            /** Flag the config for clearing. */
+            $this->clearConfig = true;
+            return;
+        }
     }
 
     /**
@@ -116,6 +144,10 @@ class Cli
 
         if (!empty($this->addDefaultValue)) {
             $this->addDefaultValue();
+        }
+
+        if ($this->clearConfig) {
+            $this->clearConfig();
         }
     }
 
@@ -191,6 +223,17 @@ USAGE;
         foreach ($defaultValue as $className => $parameters) {
             $this->config->addDefaultValue($className, $parameters);
         }
+
+        $this->config->saveConfig();
+    }
+
+    /**
+     * Clears the DI configuration JSON file.
+     */
+    protected function clearConfig()
+    {
+        $this->config->rewrites = new \StdClass();
+        $this->config->defaultValues = new \StdClass();
 
         $this->config->saveConfig();
     }

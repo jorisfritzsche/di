@@ -100,7 +100,7 @@ class Factory
      * @param \ReflectionParameter[] $reflectionParameters
      * @param mixed[]                $givenArguments
      *
-     * @return \mixed[]
+     * @return mixed[]
      *
      * @throws Exception
      */
@@ -128,7 +128,7 @@ class Factory
     /**
      * @param \ReflectionParameter $reflectionParameter
      *
-     * @return false|mixed|\ReflectionType|string
+     * @return mixed
      * @throws Exception
      */
     protected function getParameter(\ReflectionParameter $reflectionParameter)
@@ -170,7 +170,7 @@ class Factory
     /**
      * @param mixed[] $mergedParameters
      *
-     * @return \object[]
+     * @return object[]
      *
      * @throws Exception
      */
