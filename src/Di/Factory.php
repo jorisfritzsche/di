@@ -1,5 +1,16 @@
 <?php
 
+/*
+ * This file is part of the Di package.
+ *
+ * (c) Joris Fritzsche <joris.fritzsche@outlook.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+declare(strict_types = 1);
+
 namespace Di;
 
 class Factory
@@ -137,7 +148,7 @@ class Factory
      *
      * @return \ReflectionMethod|null
      */
-    protected function getConstructor(\ReflectionClass $reflector) : \ReflectionMethod
+    protected function getConstructor(\ReflectionClass $reflector)
     {
         return $reflector->getConstructor();
     }
@@ -203,7 +214,7 @@ class Factory
         $type = $reflectionParameter->getType();
 
         /** If the type is an auto-loadable class, add it to the array. */
-        if (class_exists($type)) {
+        if (class_exists((string) $type)) {
             /** Process any rewrites that may have been set in the config. */
             return (string) $this->rewrites->processRewrites($type);
         }
@@ -245,7 +256,11 @@ class Factory
              * If the parameter can be autoloaded, do so using this class' getter. This way we can recursively inject
              * dependencies.
              */
-            if ($parameter instanceof \ReflectionType || class_exists($parameter)) {
+            if ($parameter instanceof \ReflectionType
+                || (is_string($parameter)
+                    && class_exists($parameter)
+                )
+            ) {
                 $mergedParameters[$name] = $this->get($parameter);
             }
         }
