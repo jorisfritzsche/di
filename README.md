@@ -21,6 +21,21 @@ $test = $factory->get('\SomeNameSpace\SomeClass');
 
 ```
 
+## CLI usage
+DI comes shipped with a CLI that allows you to modify some of it's behaviour.
+
+```bash
+bin/di --version
+bin/di --help
+bin/di --add-rewrite {\"\\\\SomeNameSpace\\\\SomeClass\":\"\\\\SomeNameSpace\\\\SomeOtherClass\"}
+bin/di --add-default-value {\"\\\\SomeNameSpace\\\\SomeClass\":{\"someParameterName\":\"some_default_value\"}}
+bin/di --set-env production/develop
+bin/di --clear-cache
+bin/di --clear-config=some_config
+
+```
+
+
 # About
 
 ## Requirements
