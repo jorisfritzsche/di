@@ -5,11 +5,6 @@ namespace Di;
 class Cli
 {
     /**
-     * @var string
-     */
-    protected $version;
-
-    /**
      * @var Config
      */
     protected $config;
@@ -50,6 +45,7 @@ class Cli
     {
         $this->config = $config;
 
+        /** This is a list of all available and accepted options. */
         $options = getopt(
             'hv',
             [
@@ -60,11 +56,6 @@ class Cli
                 'add-default-value:'
             ]
         );
-
-        $composerJson = file_get_contents(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'composer.json');
-        $composerJson = json_decode($composerJson, true);
-
-        $this->version = $composerJson['version'];
 
         if (isset($options['v']) || isset($options['verbose'])) {
             $this->verbose = true;
@@ -81,7 +72,7 @@ class Cli
         }
 
         if (isset($options['add-rewrite'])) {
-            $rewrites = json_decode($options['add-rewrite']);
+            $rewrites = json_decode($options['add-rewrite'], true);
             if (!$rewrites) {
                 throw new \Exception(
                     "Invalid rewrite given: {$options['add-rewrite']}. Rewrites must be given in JSON format."
@@ -93,26 +84,73 @@ class Cli
         }
 
         if (isset($options['add-default-value'])) {
-            $rewrites = json_decode($options['add-default-value']);
-            if (!$rewrites) {
+            $defaultValues = json_decode($options['add-default-value'], true);
+            if (!$defaultValues) {
                 throw new \Exception(
                     "Invalid default value given: {$options['add-default-value']}. Default values must be given in" .
                     " JSON format."
                 );
             }
 
-            $this->addDefaultValue = $options['add-default-value'];
+            $this->addDefaultValue = $defaultValues;
             return;
         }
     }
 
+    /**
+     * Execute the operation.
+     */
     public function execute()
     {
+        if ($this->showVersion) {
+            $this->showVersion();
+        }
+
         if ($this->help) {
             $this->help();
         }
+
+        if (!empty($this->addRewrite)) {
+            $this->addRewrite();
+        }
+
+        if (!empty($this->addDefaultValue)) {
+            $this->addDefaultValue();
+        }
     }
 
+    /**
+     * @return string
+     */
+    protected function getCurrentVersion()
+    {
+        /** Get the composer.json file and parse it to find the current package's version. */
+        $composerJson = file_get_contents(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'composer.json');
+        $composerJson = json_decode($composerJson, true);
+
+        return $composerJson['version'];
+    }
+
+    /**
+     * Show the current version of the DI package.
+     */
+    protected function showVersion()
+    {
+        echo <<<VERSION
+  ____ ___    ____ _     ___
+ |  _ \_ _|  / ___| |   |_ _|
+ | | | | |  | |   | |    | |
+ | |_| | |  | |___| |___ | |
+ |____/___|  \____|_____|___|
+
+\033[32mDI CLI\033[0m version \033[33m{$this->getCurrentVersion()}\033[0m by \033[32mJoris Fritzsche.\033[0m
+
+VERSION;
+    }
+
+    /**
+     * Show usage information.
+     */
     protected function help()
     {
         echo <<<USAGE
@@ -122,7 +160,7 @@ class Cli
  | |_| | |  | |___| |___ | |
  |____/___|  \____|_____|___|
 
-\033[32mDI CLI\033[0m version \033[33m{$this->version}\033[0m by \033[32mJoris Fritzsche.\033[0m
+\033[32mDI CLI\033[0m version \033[33m{$this->getCurrentVersion()}\033[0m by \033[32mJoris Fritzsche.\033[0m
 
 \033[33mOptions:\033[0m
   \033[32m-h, --help\033[0m             Display this help message
@@ -132,5 +170,28 @@ class Cli
   \033[32m--add-default-value\033[0m    The root of the Magento installation, defaults to current working directory, only supports full file path at the moment
 
 USAGE;
+    }
+
+    /**
+     * Add a rewrite to the config.
+     */
+    protected function addRewrite()
+    {
+        $rewrite = $this->addRewrite;
+
+        $this->config->addRewrite($rewrite)->saveConfig();
+    }
+
+    /**
+     * Add a rewrite to the config.
+     */
+    protected function addDefaultValue()
+    {
+        $defaultValue = $this->addDefaultValue;
+        foreach ($defaultValue as $className => $parameters) {
+            $this->config->addDefaultValue($className, $parameters);
+        }
+
+        $this->config->saveConfig();
     }
 }

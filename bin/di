@@ -1,12 +1,20 @@
 #!/usr/bin/php
 <?php
 
-require_once(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Cli.php');
-require_once(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Config.php');
+error_reporting(E_ALL);
+ini_set('display_errors', true);
 
-$config = new \Di\Config();
-$config->init();
+try {
+    require_once(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Cli.php');
+    require_once(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Config.php');
 
-$cli = new \Di\Cli($config);
-$cli->execute();
+    $config = new \Di\Config();
+    $config->init();
+
+    $cli = new \Di\Cli($config);
+    $cli->execute();
+} catch (\Exception $e) {
+    echo $e->getMessage();
+    echo $e->getTraceAsString();
+}
 

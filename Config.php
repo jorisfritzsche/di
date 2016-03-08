@@ -61,8 +61,8 @@ class Config
         if (isset($this->defaultValues[$className])) {
             $defaultValue = array_merge($this->defaultValues[$className], $defaultValue);
         }
-        $this->defaultValues[$className] = $defaultValue;
 
+        $this->defaultValues[$className] = $defaultValue;
         return $this;
     }
 
