@@ -1,0 +1,10 @@
+{
+    "rewrites": {
+        "\\Test\\TestClass": "\\Test2\\TestClass"
+    },
+    "default_values": {
+        "\\Test\\TestClass": {
+            "outputText": "default output"
+        }
+    }
+}
