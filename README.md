@@ -45,3 +45,13 @@ bin/di --clear-config=some_config
 
 ## Author
 Joris Fritzsche - joris.fritzsche@outlook.com
+
+# TODO
+* Debugging support through monolog or other loggers
+* Full support for environment variables
+* Refactor CLI class
+* Think of a decent name for this project
+* Unittests
+* Support for variadic parameters
+* Additional caching for various config values
+* Read config values through CLI
