@@ -66,9 +66,6 @@ class Cli
             ]
         );
 
-        /**
-         * @todo implement verbose operator as well as debugging options
-         */
         if (isset($options['v']) || isset($options['verbose'])) {
             $this->verbose = true;
         }
@@ -161,30 +158,37 @@ class Cli
     {
         if ($this->showVersion) {
             $this->showVersion();
+            return;
         }
 
         if ($this->help) {
             $this->help();
+            return;
         }
 
         if (!empty($this->addRewrite)) {
             $this->addRewrite();
+            return;
         }
 
         if (!empty($this->addDefaultValue)) {
             $this->addDefaultValue();
+            return;
         }
 
         if (!empty($this->setEnv)) {
             $this->setEnv();
+            return;
         }
 
         if ($this->clearCaches) {
             $this->clearCache();
+            return;
         }
 
         if ($this->clearConfig) {
             $this->clearConfig();
+            return;
         }
     }
 
@@ -193,9 +197,12 @@ class Cli
      */
     protected function getCurrentVersion() : string
     {
+        $this->output("Outputting current version.");
+
         /** Get the composer.json file and parse it to find the current package's version. */
         $composerJson = file_get_contents(dirname(__FILE__) . DIRECTORY_SEPARATOR . 'composer.json');
         $composerJson = json_decode($composerJson, true);
+        $this->output("Version parsed from composer.json: {$composerJson['version']}");
 
         return $composerJson['version'];
     }
@@ -205,6 +212,7 @@ class Cli
      */
     protected function showVersion()
     {
+        $this->output("Output:");
         echo <<<VERSION
   ____ ___    ____ _     ___
  |  _ \_ _|  / ___| |   |_ _|
@@ -237,7 +245,8 @@ VERSION;
   \033[32m--version\033[0m              Display the current version.
   \033[32m--add-rewrite\033[0m          Add new rewrites to the config.json file.
   \033[32m--add-default-value\033[0m    Add new default values to the config.json file.
-  \033[32m--clear-cache\033[0m         Clear the cache files. This operation accepts a comma-separated list of caches to clear. If no caches are specified, all will be cleared.
+  \033[32m--set-env\033[0m              Set the application's environment variable.
+  \033[32m--clear-cache\033[0m          Clear the cache files. This operation accepts a comma-separated list of caches to clear. If no caches are specified, all will be cleared.
   \033[32m--clear-config\033[0m         Clear the config JSON files. Beware: this action cannot be undone. This operation accepts a comma-separated list of configs to clear. If no configs are specified, all will be cleared.
 
 USAGE;
@@ -253,6 +262,7 @@ USAGE;
         $rewrite = $this->addRewrite;
 
         $config = new Config\Rewrites;
+        $this->output("Rewriting class: " . key($rewrite) . " to: " . current($rewrite));
         $config->addRewrite($rewrite)->saveConfig();
     }
 
@@ -266,6 +276,8 @@ USAGE;
         $defaultValue = $this->addDefaultValue;
         $config = new Config\DefaultValues();
         foreach ($defaultValue as $className => $parameters) {
+            $this->output("Adding default value for class: " . $className);
+            $this->output("Default values: " . var_export($parameters, true));
             $config->addDefaultValue($className, $parameters);
         }
 
@@ -298,6 +310,7 @@ USAGE;
         $cachesToClear = $this->clearCaches;
 
         if (!is_array($cachesToClear)) {
+            $this->output("Clearing all caches.");
             $cachesToClear = array_keys($config->data);
         }
 
@@ -316,6 +329,7 @@ USAGE;
      */
     protected function clearCacheType(Config\Caches $config, string $cacheType)
     {
+        $this->output("Clearing cache type: " . $cacheType);
         if (!isset($config->data[$cacheType])) {
             throw new \Exception("Unknown cache type requested: {$cacheType}.");
         }
@@ -326,6 +340,7 @@ USAGE;
         /** @var \Di\Cache\AbstractCache $cacheToClear */
         $cacheToClear = new $className;
         $cacheToClear->clear();
+        $this->output("Cache type cleared: " . $cacheType);
     }
 
     /**
@@ -340,6 +355,7 @@ USAGE;
         $configsToClear = $this->clearConfig;
 
         if (!is_array($configsToClear)) {
+            $this->output("Clearing all configs.");
             $configsToClear = array_keys($config->data);
         }
 
@@ -358,6 +374,7 @@ USAGE;
      */
     protected function clearConfigType(Config\Configs $config, string $configType)
     {
+        $this->output("Clearing config type: " . $configType);
         if (!isset($config->data[$configType])) {
             throw new \Exception("Unknown config type requested: {$configType}.");
         }
@@ -370,6 +387,7 @@ USAGE;
 
         $configToClear->data = new \StdClass();
         $configToClear->saveConfig();
+        $this->output("Config type cleared: " . $configType);
     }
 
     /**
@@ -383,11 +401,26 @@ USAGE;
     {
         $root = dirname(__FILE__) . DIRECTORY_SEPARATOR;
         foreach ($classes as $class) {
+            $this->output("Loading class: $class");
+
             $class = str_replace(['\\Di', 'Di'], '', $class);
             $file = str_replace('\\', DIRECTORY_SEPARATOR, $class) . '.php';
 
             /** @noinspection PhpIncludeInspection */
             require_once($root . $file);
         }
+    }
+
+    /**
+     * @param string $text
+     * @param bool $force
+     */
+    public function output(string $text, $force = false)
+    {
+        if (!$force && !$this->verbose) {
+            return;
+        }
+
+        echo "\033[32m" . $text . "\033[0m" . PHP_EOL;
     }
 }

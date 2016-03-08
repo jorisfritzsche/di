@@ -24,6 +24,8 @@ abstract class AbstractCache
 
     /**
      * AbstractCache constructor.
+     *
+     * @todo make caching dependent on app env.
      */
     public function __construct()
     {

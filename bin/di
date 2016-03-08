@@ -9,6 +9,7 @@ try {
 
     $cli = new \Di\Cli();
     $cli->execute();
+    $cli->output("Operation completed.", true);
 } catch (\Exception $e) {
     echo "\033[31m" . $e->getMessage() . PHP_EOL . PHP_EOL;
     echo "\e[34mStack trace:" . $e->getTraceAsString() . "\033[0m" . PHP_EOL;
