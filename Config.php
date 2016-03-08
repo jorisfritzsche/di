@@ -71,7 +71,7 @@ class Config
      */
     protected function getConfigFile()
     {
-        $file = __DIR__ . '/' . self::CONFIG_DIR . '/' . self::CONFIG_FILE;
+        $file = __DIR__ . DIRECTORY_SEPARATOR . self::CONFIG_DIR . DIRECTORY_SEPARATOR . self::CONFIG_FILE;
 
         return $file;
     }

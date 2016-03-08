@@ -1,0 +1,12 @@
+#!/usr/bin/php
+<?php
+
+require_once(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Cli.php');
+require_once(dirname(dirname(__FILE__)) . DIRECTORY_SEPARATOR . 'Config.php');
+
+$config = new \Di\Config();
+$config->init();
+
+$cli = new \Di\Cli($config);
+$cli->execute();
+
