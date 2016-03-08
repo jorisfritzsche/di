@@ -1,0 +1,14 @@
+{
+    "name": "jorisfritzsche/di",
+    "description": "Basic DI for PHP",
+    "require": {
+        "php": "~7.0.0"
+    },
+    "license": "MIT",
+    "type": "",
+    "autoload": {
+        "psr-4": {
+            "DI\\": ""
+        }
+    }
+}
