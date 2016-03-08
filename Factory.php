@@ -7,7 +7,7 @@ class Factory
     /**
      * @var Config
      */
-    protected $config;
+    public $config;
 
     /**
      * Factory constructor.

@@ -39,11 +39,49 @@ class Config
     }
 
     /**
+     * @param array $rewrite
+     *
+     * @return $this
+     */
+    public function addRewrite(array $rewrite)
+    {
+        $this->rewrites = array_merge_recursive($this->rewrites, $rewrite);
+
+        return $this;
+    }
+
+    /**
+     * @param string $className
+     * @param array  $defaultValue
+     *
+     * @return $this
+     */
+    public function addDefaultValue(string $className, array $defaultValue)
+    {
+        if (isset($this->defaultValues[$className])) {
+            $defaultValue = array_merge($this->defaultValues[$className], $defaultValue);
+        }
+        $this->defaultValues[$className] = $defaultValue;
+
+        return $this;
+    }
+
+    /**
+     * @return string
+     */
+    protected function getConfigFile()
+    {
+        $file = __DIR__ . '/' . self::CONFIG_DIR . '/' . self::CONFIG_FILE;
+
+        return $file;
+    }
+
+    /**
      * @return string[]
      */
     protected function getConfigJson()
     {
-        $file = __DIR__ . '/' . self::CONFIG_DIR . '/' . self::CONFIG_FILE;
+        $file = $this->getConfigFile();
         $config = [];
         if (file_exists($file)) {
             $json = file_get_contents($file);
@@ -52,6 +90,38 @@ class Config
         }
 
         return $config;
+    }
+
+    /**
+     * Save the current config to the configuration file.
+     *
+     * Please note: this overwrites the actual file, not the cache!
+     *
+     * @return $this
+     */
+    public function saveConfig()
+    {
+        $file = $this->getConfigFile();
+
+        $this->mergeConfig();
+        $config = json_encode($this->config, JSON_PRETTY_PRINT | JSON_FORCE_OBJECT);
+
+        file_put_contents($file, $config);
+
+        return $this;
+    }
+
+    /**
+     * @return $this
+     */
+    protected function mergeConfig()
+    {
+        $this->config = [
+            'rewrites' => $this->rewrites,
+            'default_values' => $this->defaultValues,
+        ];
+
+        return $this;
     }
 
     /**
