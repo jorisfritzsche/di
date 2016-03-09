@@ -1,3 +1,5 @@
 {
-
+    "\\Test\\TestClass": {
+        "outputText": "some_default_value"
+    }
 }

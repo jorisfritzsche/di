@@ -1,19 +1,16 @@
 <?php
 
-/*
- * This file is part of the Di package.
- *
- * (c) Joris Fritzsche <joris.fritzsche@outlook.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+/**
+ * @copyright 2016 Joris Fritzsche
+ * @license MIT
+ * @author Joris Fritzsche (joris.fritzsche@outlook.com)
  */
 
 declare(strict_types = 1);
 
 namespace Di;
 
-class Factory
+class Container
 {
     /**
      * @var Config\Rewrites
@@ -36,13 +33,31 @@ class Factory
     protected $processingClasses = [];
 
     /**
-     * Factory constructor.
+     * @var string
      */
-    public function __construct()
-    {
-        $rewrites      = new Config\Rewrites();
-        $defaultValues = new Config\DefaultValues();
-        $cache         = new Cache\Classes();
+    protected $className;
+
+    /**
+     * Factory constructor.
+     *
+     * @param Config\Rewrites      $rewrites
+     * @param Config\DefaultValues $defaultValues
+     * @param Cache\Classes        $cache
+     */
+    public function __construct(
+        Config\Rewrites $rewrites = null, Config\DefaultValues $defaultValues = null, Cache\Classes $cache = null
+    ) {
+        if (!$rewrites) {
+            $rewrites = $this->create("Di\\Config\\Rewrites");
+        }
+
+        if (!$defaultValues) {
+            $defaultValues = $this->create("Di\\Config\\DefaultValues");
+        }
+
+        if (!$cache) {
+            $cache = $this->create("Di\\Cache\\Classes");
+        }
 
         $this->rewrites      = $rewrites;
         $this->defaultValues = $defaultValues;
@@ -59,7 +74,7 @@ class Factory
      *
      * @throws Exception
      */
-    public function get(string $className, array $givenArguments = [])
+    public function create(string $className, array $givenArguments = [])
     {
         /** Check if the requested class can be autoloaded. */
         if (!class_exists($className)) {
@@ -73,6 +88,8 @@ class Factory
                 . "each other, causing an infinite loop."
             );
         }
+
+        $this->className = $className;
 
         /** Add the requested class name to the array of classes being processed. */
         $this->processingClasses[$className] = true;
@@ -92,22 +109,48 @@ class Factory
             return $this->createNewInstance($reflector, null, $className);
         }
 
-        $reflectionParameters = $this->cache->retrieve($className);
+        /** Get the parameters from the cache, if available. */
+        $reflectionParameters = false;
+        if ($this->cache) {
+            $reflectionParameters = $this->cache->retrieve($className);
+        }
+
         if (!$reflectionParameters) {
-            /** Get the paremeters of the constructor. */
+            /** Get the parameters of the constructor. */
             $reflectionParameters = $this->getMethodParams($constructor);
 
-            $this->cache->store($className, $reflectionParameters);
+            $this->storeClassData($className, $reflectionParameters);
         }
 
         /** Merge the parameters with the already provided arguments. */
         $mergedParameters = $this->mergeParams($reflectionParameters, $givenArguments);
 
+        /** Process the paramaters to look for default values and to process rewrites. */
+        $processedParameters = $this->processParameters($mergedParameters);
+
         /** Load the arguments. Please note: this may be recursive. */
-        $loadedParameters = $this->loadParameters($mergedParameters);
+        $loadedParameters = $this->loadParameters($processedParameters);
 
         /** return a new instance of the requested class with the loaded arguments. */
         return $this->createNewInstance($reflector, $loadedParameters, $className);
+    }
+
+    /**
+     * @param string $className
+     * @param array  $reflectionParameters
+     *
+     * @return Container
+     */
+    protected function storeClassData(string $className, array $reflectionParameters) : self
+    {
+        $storableData = [];
+        foreach ($reflectionParameters as $name => $parameter) {
+            $storableData[$name] = $parameter['type'];
+        }
+
+        $this->cache->store($className, $storableData);
+
+        return $this;
     }
 
     /**
@@ -155,7 +198,10 @@ class Factory
 
     /**
      * @param \ReflectionMethod $reflectionMethod
-     * @return string[]
+     *
+     * @return array
+     *
+     * @throws Exception
      */
     protected function getMethodParams(\ReflectionMethod $reflectionMethod) : array
     {
@@ -163,7 +209,7 @@ class Factory
 
         $processedParameters = [];
         foreach ($parameters as $parameter) {
-            $processedParameters[$parameter->getName()] = $this->getParameter($parameter);
+            $processedParameters[$parameter->getName()] = $this->getParameterType($parameter);
         }
 
         return $processedParameters;
@@ -192,7 +238,6 @@ class Factory
                 $mergedParams[$name] = $givenArguments[$name];
                 continue;
             }
-
             $mergedParams[$name] = $reflectionParameter;
         }
 
@@ -205,40 +250,105 @@ class Factory
      * @return mixed
      * @throws Exception
      */
-    protected function getParameter(\ReflectionParameter $reflectionParameter)
+    protected function getParameterType(\ReflectionParameter $reflectionParameter)
     {
-        /** Get the parameter's name. */
-        $name = $reflectionParameter->getName();
-
         /** Get the ReflectionType for the given parameter. */
         $type = $reflectionParameter->getType();
 
         /** If the type is an auto-loadable class, add it to the array. */
-        if (class_exists((string) $type)) {
+        if ($this->rewrites && class_exists((string) $type)) {
+            /** Process any rewrites that may have been set in the config. */
+            return [
+                'parameter' => $reflectionParameter,
+                'type'      => (string) $this->rewrites->processRewrites((string) $type),
+            ];
+        } elseif (class_exists((string) $type)) {
+            return [
+                'parameter' => $reflectionParameter,
+                'type'      => (string) $type,
+            ];
+        }
+
+        return [
+            'parameter' => $reflectionParameter,
+            'type'      => '__scalar__',
+        ];
+    }
+
+    /**
+     * @param string $name
+     * @param array  $parameter
+     *
+     * @return mixed
+     * @throws Exception
+     */
+    protected function getParameter(string $name, array $parameter)
+    {
+        /** Get the ReflectionType for the given parameter. */
+        $type = $parameter['type'];
+        /** @var \ReflectionParameter|false $reflectionParameter */
+        $reflectionParameter = $parameter['parameter'];
+
+        /** If the type is an auto-loadable class, add it to the array. */
+        if ($this->rewrites && class_exists((string) $type)) {
             /** Process any rewrites that may have been set in the config. */
             return (string) $this->rewrites->processRewrites($type);
         }
 
-        /** If this parameter has a default value specified in the DI config, add that to the array */
-        $defaultDiValue = $this->defaultValues->getDefaultDiValue($reflectionParameter);
-        if ($defaultDiValue) {
-            return $defaultDiValue;
+        if ($this->defaultValues) {
+            /** If this parameter has a default value specified in the DI config, add that to the array */
+            $defaultDiValue = $this->defaultValues->getDefaultDiValue($this->className, $name);
+            if ($defaultDiValue) {
+                return $defaultDiValue;
+            }
         }
 
-        /** Otherwise, if it has a default value in the function definition, add gthat to the array. */
-        if ($reflectionParameter->isDefaultValueAvailable()) {
+        /** Otherwise, if it has a default value in the function definition, add that to the array. */
+        if ($reflectionParameter && $reflectionParameter->isDefaultValueAvailable()) {
             return $reflectionParameter->getDefaultValue();
         }
 
-        /**
-         * N.B. If the ReflectionParameter is not an auto-loadable class and has no default value, it will not be
-         * added to the array. What this means is, that unless the calling function has supplied it in the
-         * givenArguments array, it will lead to an error later on when the class is instantiated with insufficient
-         * parameters.
-         */
         throw new Exception(
-            "Parameter {$name} cannot be autoloaded, has no default value and was not given as an argument."
+            "Parameter {$name} cannot be autoloaded, has no default value and was not given" .
+            " as an argument."
         );
+    }
+
+    /**
+     * @param array $mergedParameters
+     *
+     * @return array
+     * @throws Exception
+     */
+    protected function processParameters(array $mergedParameters) : array
+    {
+        /** Loop through all parameters and process them if needed. */
+        foreach ($mergedParameters as $name => $parameter) {
+            /** unprocessed scalar values, still need to be processed in order to look for possible default values. */
+            if ($parameter == "__scalar__") {
+                $mergedParameters[$name] = $this->getParameter($name, ['type' => "__scalar", 'parameter' => false]);
+                continue;
+            }
+
+            /**
+             * Some parameters still need to be processed before autoloading. These are stored as an array with 2 items:
+             *  "parameter": \ReflectionParameter
+             *  "type": string
+             *
+             * @todo move this logic to a separate method or class.
+             */
+            if (is_array($parameter)
+                && isset($parameter['parameter'])
+                && $parameter['parameter'] instanceof \ReflectionParameter
+            ) {
+                /**
+                 * Process the parameter array. This will process rewrites and default values.
+                 */
+                $mergedParameters[$name] = $this->getParameter($name, $parameter);
+            }
+        }
+
+        return $mergedParameters;
     }
 
     /**
@@ -261,7 +371,8 @@ class Factory
                     && class_exists($parameter)
                 )
             ) {
-                $mergedParameters[$name] = $this->get($parameter);
+                $mergedParameters[$name] = $this->create((string) $parameter);
+                continue;
             }
         }
 

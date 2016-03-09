@@ -1,12 +1,9 @@
 <?php
 
-/*
- * This file is part of the Di package.
- *
- * (c) Joris Fritzsche <joris.fritzsche@outlook.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+/**
+ * @copyright 2016 Joris Fritzsche
+ * @license MIT
+ * @author Joris Fritzsche (joris.fritzsche@outlook.com)
  */
 
 declare(strict_types = 1);
@@ -33,14 +30,14 @@ class Rewrites extends AbstractConfig
     /**
      * Process any rewrites found in the DI config.
      *
-     * @param \ReflectionType $type
+     * @param string $type
      *
      * @return \ReflectionType|string
      */
-    public function processRewrites(\ReflectionType $type)
+    public function processRewrites(string $type)
     {
         /** Get the type's class name and make sure it starts in the root namespace. */
-        $stringType = (string) $type;
+        $stringType = $type;
         if (strpos($stringType, '\\') !== 0) {
             $stringType = '\\' . $stringType;
         }

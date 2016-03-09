@@ -1,12 +1,9 @@
 <?php
 
-/*
- * This file is part of the Di package.
- *
- * (c) Joris Fritzsche <joris.fritzsche@outlook.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
+/**
+ * @copyright 2016 Joris Fritzsche
+ * @license MIT
+ * @author Joris Fritzsche (joris.fritzsche@outlook.com)
  */
 
 declare(strict_types = 1);
@@ -36,22 +33,23 @@ class DefaultValues extends AbstractConfig
     /**
      * Try to find a default value for this parameter from the DI config.
      *
-     * @param \ReflectionParameter $reflectionParameter
+     * @param string $className
+     * @param string $parameterName
      *
-     * @return mixed|false
+     * @return false|mixed
+     *
      */
-    public function getDefaultDiValue(\ReflectionParameter $reflectionParameter)
+    public function getDefaultDiValue(string $className, string $parameterName)
     {
-        /** Get the parameter's declaring class' class name and make sure it starts in the root namespace. */
-        $className = $reflectionParameter->getDeclaringClass()->getName();
+        /** Get the parameter's declaring class' class name and make sure it starts in the root namespace. */;
         if (strpos($className, '\\') !== 0) {
             $className = '\\' . $className;
         }
 
         /** Check if a default value is defined for this parameter and return it. */
         $defaultValues = $this->data;
-        if (isset($defaultValues[$className][$reflectionParameter->getName()])) {
-            return $defaultValues[$className][$reflectionParameter->getName()];
+        if (isset($defaultValues[$className][$parameterName])) {
+            return $defaultValues[$className][$parameterName];
         }
 
         return false;

@@ -17,9 +17,9 @@ $ composer require jorisfritzsche/di
 
 ```php
 <?php
-$factory = new \Di\Factory();
+$container = new \Di\Container();
 
-$test = $factory->get('\SomeNameSpace\SomeClass');
+$test = $container->get('\SomeNameSpace\SomeClass');
 
 ```
 
