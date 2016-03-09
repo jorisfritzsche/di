@@ -10,14 +10,17 @@ declare(strict_types = 1);
 
 namespace Di;
 
-use Di\FileLoader\Json;
-
 class Cli
 {
     /** Available output levels. */
     const OUTPUT_LEVEL_NOTICE  = 1;
     const OUTPUT_LEVEL_WARNING = 2;
     const OUTPUT_LEVEL_ERROR   = 3;
+
+    /**
+     * @var Container
+     */
+    protected $container;
 
     /**
      * @var bool
@@ -62,10 +65,16 @@ class Cli
     /**
      * Cli constructor.
      *
+     * @param Container $container
+     *
      * @throws Cli\Exception
      */
-    public function __construct()
+    public function __construct(Container $container = null)
     {
+        if (!$container) {
+            $this->container = new Container();
+        }
+
         /** This is a list of all available and accepted options. */
         $options = getopt(
             'hv',
@@ -316,7 +325,7 @@ USAGE;
     {
         $rewrite = $this->addRewrite;
 
-        $config = new Config\Rewrites(new Json());
+        $config = $this->container->create("Di\\Config\\Rewrites");
         $this->output("Rewriting class: " . key($rewrite) . " to: " . current($rewrite), self::OUTPUT_LEVEL_NOTICE);
         $config->addRewrite($rewrite)->saveConfig();
     }
@@ -327,7 +336,7 @@ USAGE;
     protected function addDefaultValue()
     {
         $defaultValue = $this->addDefaultValue;
-        $config = new Config\DefaultValues(new Json());
+        $config = $this->container->create("Di\\Config\\DefaultValues");
 
         /** Loop through all new default values and add them individually. */
         foreach ($defaultValue as $className => $parameters) {
@@ -346,7 +355,8 @@ USAGE;
     {
         $env = $this->setEnv;
 
-        $config = new Config\Application(new Json());
+        /** @var \Di\Config\Application $config */
+        $config = $this->container->create("Di\\Config\\Application");
         $config->setEnv($env);
         $config->saveConfig();
     }
@@ -358,7 +368,8 @@ USAGE;
      */
     protected function clearCache()
     {
-        $config = new Config\Caches(new Json());
+        /** @var Config\Caches $config */
+        $config = $this->container->create("Di\\Config\\Caches");
 
         $cachesToClear = $this->clearCaches;
 
@@ -392,7 +403,7 @@ USAGE;
         $className = $config->data[$cacheType];
 
         /** @var \Di\Cache\AbstractCache $cacheToClear */
-        $cacheToClear = new $className;
+        $cacheToClear = $this->container->create($className);
         $cacheToClear->clear();
         $this->output("Cache type cleared: " . $cacheType, self::OUTPUT_LEVEL_NOTICE);
     }
@@ -402,7 +413,7 @@ USAGE;
      */
     protected function clearConfig()
     {
-        $config = new Config\Configs(new Json());
+        $config = $this->container->create("Di\\Config\\Configs");
 
         $configsToClear = $this->clearConfig;
 
@@ -436,9 +447,9 @@ USAGE;
         $className = $config->data[$configType];
 
         /** @var \Di\Config\AbstractConfig $configToClear */
-        $configToClear = new $className;
+        $configToClear = $this->container->create($className);
 
-        $configToClear->data = new \StdClass();
+        $configToClear->data = $this->container->create("\\StdCLass");
         $configToClear->saveConfig();
         $this->output("Config type cleared: " . $configType, self::OUTPUT_LEVEL_NOTICE);
     }

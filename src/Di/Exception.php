@@ -10,6 +10,9 @@ declare(strict_types = 1);
 
 namespace Di;
 
+/**
+ * Basic DI exception class.
+ */
 class Exception extends \Exception
 {
 

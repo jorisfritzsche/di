@@ -104,7 +104,7 @@ class Json implements FileLoaderInterface
             throw new Exception("File {$file} is not readable.");
         }
 
-        file_put_contents($file, $data);
+        file_put_contents($filePath, $data);
 
         return $this;
     }
