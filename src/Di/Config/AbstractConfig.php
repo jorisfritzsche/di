@@ -10,15 +10,18 @@ declare(strict_types = 1);
 
 namespace Di\Config;
 
+use Di\FileLoader\Json;
+
 abstract class AbstractConfig
 {
+    /** The config file and directory where the config is stored. */
     const CONFIG_DIR = 'etc';
     const CONFIG_FILE = '';
 
     /**
-     * @var bool
+     * @var Json
      */
-    protected $mergeConfig = false;
+    protected $fileLoader;
 
     /**
      * @var string[]
@@ -27,24 +30,14 @@ abstract class AbstractConfig
 
     /**
      * Initialize the configuration.
+     *
+     * @param Json $fileLoader
      */
-    public function __construct()
+    public function __construct(Json $fileLoader)
     {
+        $this->fileLoader = $fileLoader;
+
         $this->data = $this->getConfigJson();
-    }
-
-    /**
-     * @return string
-     */
-    protected function getConfigFile() : string
-    {
-        $file = dirname(dirname(dirname(dirname(__FILE__))))
-            . DIRECTORY_SEPARATOR
-            . static::CONFIG_DIR
-            . DIRECTORY_SEPARATOR
-            . static::CONFIG_FILE;
-
-        return $file;
     }
 
     /**
@@ -52,13 +45,7 @@ abstract class AbstractConfig
      */
     protected function getConfigJson() : array
     {
-        $file = $this->getConfigFile();
-        $config = [];
-        if (file_exists($file)) {
-            $json = file_get_contents($file);
-
-            $config = json_decode($json, true);
-        }
+        $config = $this->fileLoader->load(static::CONFIG_FILE);
 
         return $config;
     }
@@ -72,11 +59,7 @@ abstract class AbstractConfig
      */
     public function saveConfig() : self
     {
-        $file = $this->getConfigFile();
-
-        $config = json_encode($this->data, JSON_PRETTY_PRINT | JSON_FORCE_OBJECT);
-
-        file_put_contents($file, $config);
+        $this->fileLoader->save(static::CONFIG_FILE, $this->data);
 
         return $this;
     }

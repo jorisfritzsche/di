@@ -10,6 +10,8 @@ declare(strict_types = 1);
 
 namespace Di;
 
+use Di\FileLoader\Json;
+
 class Cli
 {
     /** Available output levels. */
@@ -314,7 +316,7 @@ USAGE;
     {
         $rewrite = $this->addRewrite;
 
-        $config = new Config\Rewrites;
+        $config = new Config\Rewrites(new Json());
         $this->output("Rewriting class: " . key($rewrite) . " to: " . current($rewrite), self::OUTPUT_LEVEL_NOTICE);
         $config->addRewrite($rewrite)->saveConfig();
     }
@@ -325,7 +327,7 @@ USAGE;
     protected function addDefaultValue()
     {
         $defaultValue = $this->addDefaultValue;
-        $config = new Config\DefaultValues();
+        $config = new Config\DefaultValues(new Json());
 
         /** Loop through all new default values and add them individually. */
         foreach ($defaultValue as $className => $parameters) {
@@ -344,7 +346,7 @@ USAGE;
     {
         $env = $this->setEnv;
 
-        $config = new Config\Application();
+        $config = new Config\Application(new Json());
         $config->setEnv($env);
         $config->saveConfig();
     }
@@ -356,7 +358,7 @@ USAGE;
      */
     protected function clearCache()
     {
-        $config = new Config\Caches();
+        $config = new Config\Caches(new Json());
 
         $cachesToClear = $this->clearCaches;
 
@@ -400,7 +402,7 @@ USAGE;
      */
     protected function clearConfig()
     {
-        $config = new Config\Configs();
+        $config = new Config\Configs(new Json());
 
         $configsToClear = $this->clearConfig;
 

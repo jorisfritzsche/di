@@ -302,7 +302,7 @@ class Container
     protected function storeClassData(array $reflectionParameters, string $className) : self
     {
         /** If the 'no cache'flag is set for this class, do not store any cache data. */
-        if ($this->classOptions[$className] & self::FLAG_NO_CACHE) {
+        if (!$this->cache || ($this->classOptions[$className] & self::FLAG_NO_CACHE)) {
             return $this;
         }
 
@@ -385,6 +385,11 @@ class Container
         ) {
             /** Process any rewrites that may have been set in the config. */
             return $this->rewrites->processRewrites($type);
+        }
+
+        /** If the parameter type is a class name, return the type. */
+        if (class_exists((string) $type)) {
+            return $type;
         }
 
         if ($this->defaultValues && !($this->classOptions[$className] & self::FLAG_NO_DEFAULT_VALUE)) {
