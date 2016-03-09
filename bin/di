@@ -34,9 +34,7 @@ try {
     /** Register the autoloader. */
     spl_autoload_register('diCliAutoload');
 
-    /**
-     * Instantiate the CLI and execute the operation.
-     */
+    /** Instantiate the CLI and execute the operation. */
     $cli = new \Di\Cli();
     $cli->execute();
     $cli->output("Operation completed.", true);
