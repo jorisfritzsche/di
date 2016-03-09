@@ -61,5 +61,6 @@ Joris Fritzsche - joris.fritzsche@outlook.com
 * Support for variadic parameters
 * Additional caching for various config values
 * Read config values through CLI
-* Move CLI to a separate package
 * ~~Add singleton support~~
+* Move CLI to a separate package
+* Get available CLI methods from config files using callbacks
