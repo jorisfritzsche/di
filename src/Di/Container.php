@@ -18,6 +18,12 @@ class Container
      */
     const UNDEFINED_PARAMETER = "__undefined__";
 
+    /** Class creation flags. */
+    const FLAG_SINGLETON        = 1;
+    const FLAG_NO_REWRITE       = 2;
+    const FLAG_NO_DEFAULT_VALUE = 4;
+    const FLAG_NO_CACHE         = 8;
+
     /**
      * @var Config\Rewrites
      */
@@ -36,7 +42,12 @@ class Container
     /**
      * @var array
      */
-    protected $processingClasses = [];
+    protected $classOptions = [];
+
+    /**
+     * @var array
+     */
+    protected $classRepository = [];
 
     /**
      * Container constructor.
@@ -52,15 +63,15 @@ class Container
     ) {
         /** Load required classes if they have not been passed as parameters. */
         if (!$rewrites) {
-            $rewrites = $this->create("Di\\Config\\Rewrites");
+            $rewrites = $this->create("Di\\Config\\Rewrites", [], self::FLAG_SINGLETON);
         }
 
         if (!$defaultValues) {
-            $defaultValues = $this->create("Di\\Config\\DefaultValues");
+            $defaultValues = $this->create("Di\\Config\\DefaultValues", [], self::FLAG_SINGLETON);
         }
 
         if (!$cache) {
-            $cache = $this->create("Di\\Cache\\Classes");
+            $cache = $this->create("Di\\Cache\\Classes", [], self::FLAG_SINGLETON);
         }
 
         $this->rewrites      = $rewrites;
@@ -73,20 +84,23 @@ class Container
      *
      * @param string $className
      * @param array  $givenArguments
+     * @param int    $options
      *
      * @return object
-     *
      * @throws Exception
      */
-    public function create(string $className, array $givenArguments = [])
+    public function create(string $className, array $givenArguments = [], int $options = 0)
     {
         /** Check if the requested class can be autoloaded. */
         if (!class_exists($className)) {
             throw new Exception("Class {$className} does not exist.");
         }
 
-        /** Make sure this class is not already being processed, in order to prevent infinite recursion. */
-        if (isset($this->processingClasses[$className])) {
+        /**
+         * Make sure this class is not already being processed, in order to prevent infinite recursion. We can easily
+         * do this by checking if any options are defined for this class.
+         */
+        if (isset($this->classOptions[$className])) {
             throw new Exception(
                 "Class {$className} is already being processed. This probably means that one or more classes require "
                 . "each other, causing an infinite loop."
@@ -94,12 +108,22 @@ class Container
         }
 
         /** If rewrites are available, check if there are rewrites configured for the requested class. */
-        if ($this->rewrites) {
+        if ($this->rewrites && !($options & self::FLAG_NO_REWRITE)) {
             $className = $this->rewrites->processRewrites($className);
         }
 
-        /** Add the requested class name to the array of classes being processed. */
-        $this->processingClasses[$className] = true;
+        /**
+         * If the 'singleton' option is set and this class has been stored before as a singleton, return that instance.
+         */
+        if ($options & self::FLAG_SINGLETON && isset($this->classRepository[$className])) {
+            return $this->classRepository[$className];
+        }
+
+        /**
+         * Add the requested class name to the array of classes being processed along with any options that have been
+         * defined. This allows us to recall the options regardless of any recursion.
+         */
+        $this->classOptions[$className] = $options;
 
         /** Build the class. */
         return $this->build($givenArguments, $className);
@@ -257,7 +281,7 @@ class Container
      */
     protected function retrieveClassData(string $className)
     {
-        if (!$this->cache) {
+        if (!$this->cache || ($this->classOptions[$className] & self::FLAG_NO_CACHE)) {
             return false;
         }
 
@@ -277,6 +301,11 @@ class Container
      */
     protected function storeClassData(array $reflectionParameters, string $className) : self
     {
+        /** If the 'no cache'flag is set for this class, do not store any cache data. */
+        if ($this->classOptions[$className] & self::FLAG_NO_CACHE) {
+            return $this;
+        }
+
         $this->cache->store(ltrim($className, '\\'), $reflectionParameters);
 
         return $this;
@@ -350,12 +379,15 @@ class Container
         $reflectionParameter = $parameter['parameter'];
 
         /** If the type is an auto-loadable class, add it to the array. */
-        if ($this->rewrites && class_exists((string) $type)) {
+        if ($this->rewrites
+            && class_exists((string) $type)
+            && !($this->classOptions[$className] & self::FLAG_NO_REWRITE)
+        ) {
             /** Process any rewrites that may have been set in the config. */
             return $this->rewrites->processRewrites($type);
         }
 
-        if ($this->defaultValues) {
+        if ($this->defaultValues && !($this->classOptions[$className] & self::FLAG_NO_DEFAULT_VALUE)) {
             /** If this parameter has a default value specified in the DI config, add that to the array */
             $defaultDiValue = $this->defaultValues->getDefaultDiValue($className, $name);
             if ($defaultDiValue) {
@@ -468,15 +500,23 @@ class Container
      */
     protected function createNewInstance(\ReflectionClass $reflectionClass, string $className, array $params = null)
     {
-        /** Remove the class from the array of classes being processed. */
-        unset($this->processingClasses[$className]);
-
         /** If the class should be loaded with parameters, do so. */
         if (!empty($params)) {
-            return $reflectionClass->newInstanceArgs($params);
+            $instance = $reflectionClass->newInstanceArgs($params);
+        } else {
+            /** Load the class without parameters. */
+            $instance = $reflectionClass->newInstance();
         }
 
-        /** Load the class without parameters. */
-        return $reflectionClass->newInstance();
+        /** If the 'singleton' option is set for this class, add it to the class repository for future access. */
+        if ($this->classOptions[$className] & self::FLAG_SINGLETON) {
+            $this->classRepository[$className] = $instance;
+        }
+
+        /** Remove the class from the array of classes being processed. */
+        unset($this->classOptions[$className]);
+
+        /** Return the instance. */
+        return $instance;
     }
 }
