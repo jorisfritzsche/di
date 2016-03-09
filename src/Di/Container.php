@@ -112,7 +112,9 @@ class Container
         /** Get the parameters from the cache, if available. */
         $reflectionParameters = false;
         if ($this->cache) {
-            $reflectionParameters = $this->cache->retrieve($className);
+            var_dump($this->cache, $className);
+            echo '==============' . PHP_EOL;
+            $reflectionParameters = $this->cache->retrieve(ltrim($className, '\\'));
         }
 
         if (!$reflectionParameters) {
@@ -136,6 +138,8 @@ class Container
     }
 
     /**
+     * Prepare the found class data for storage.
+     *
      * @param string $className
      * @param array  $reflectionParameters
      *
@@ -144,11 +148,29 @@ class Container
     protected function storeClassData(string $className, array $reflectionParameters) : self
     {
         $storableData = [];
+        /** Go through all parameters. */
         foreach ($reflectionParameters as $name => $parameter) {
+            /**
+             * If the parameter is scalar, process it.
+             *
+             * N.B. Processing the parameters will happen again later on, after the parameters have been merged with the
+             * user provided arguments, so this does constitude a hit to performance. However, since the results will be
+             * cached, the hit is minimal.
+             *
+             * @todo refactor so we don't have to do this twice.
+             */
+            if ($parameter['type'] == "__scalar__") {
+                try {
+                    $storableData[$name] = $this->getParameter($name, $parameter);
+                    continue;
+                } catch (Exception $e) {
+                }
+            }
+
             $storableData[$name] = $parameter['type'];
         }
 
-        $this->cache->store($className, $storableData);
+        $this->cache->store(ltrim($className, '\\'), $storableData);
 
         return $this;
     }
@@ -326,7 +348,7 @@ class Container
         foreach ($mergedParameters as $name => $parameter) {
             /** unprocessed scalar values, still need to be processed in order to look for possible default values. */
             if ($parameter == "__scalar__") {
-                $mergedParameters[$name] = $this->getParameter($name, ['type' => "__scalar", 'parameter' => false]);
+                $mergedParameters[$name] = $this->getParameter($name, ['type' => "__scalar__", 'parameter' => false]);
                 continue;
             }
 
