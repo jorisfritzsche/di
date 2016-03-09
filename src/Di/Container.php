@@ -10,6 +10,10 @@ declare(strict_types = 1);
 
 namespace Di;
 
+/**
+ * @todo Currently there are two ways parameters are passed throught his class: as an associative array or as a discrete
+ *       value. These two methods should be standardized.
+ */
 class Container
 {
     /**
@@ -113,68 +117,59 @@ class Container
         }
 
         /** Get the parameters from the cache, if available. */
-        $reflectionParameters = false;
-        if ($this->cache) {
-            $reflectionParameters = $this->cache->retrieve(ltrim($className, '\\'));
-        }
-
-        if (!$reflectionParameters) {
+        $reflectionParameters = $this->retrieveClassData();
+        $skipCache = false;
+        if ($reflectionParameters) {
+            $skipCache = true;
+        } else {
             /** Get the parameters of the constructor. */
             $reflectionParameters = $this->getMethodParams($constructor);
+        }
 
-            $this->storeClassData($className, $reflectionParameters);
+        /** Process the parameters to look for default values and to process rewrites. */
+        $processedParameters = $this->processParameters($reflectionParameters);
+
+        /** Store the data in the cache. */
+        if ($skipCache === false) {
+            $this->storeClassData($processedParameters);
         }
 
         /** Merge the parameters with the already provided arguments. */
-        $mergedParameters = $this->mergeParams($reflectionParameters, $givenArguments);
-
-        /** Process the parameters to look for default values and to process rewrites. */
-        $processedParameters = $this->processParameters($mergedParameters);
+        $mergedParameters = $this->mergeParams($processedParameters, $givenArguments);
 
         /** Load the arguments. Please note: this may be recursive. */
-        $loadedParameters = $this->loadParameters($processedParameters);
+        $loadedParameters = $this->loadParameters($mergedParameters);
 
         /** return a new instance of the requested class with the loaded arguments. */
         return $this->createNewInstance($reflector, $className, $loadedParameters);
     }
 
     /**
+     * Retrieve data from the cache.
+     *
+     * @return bool|mixed|null
+     */
+    protected function retrieveClassData()
+    {
+        if (!$this->cache) {
+            return false;
+        }
+
+        $data = $this->cache->retrieve(ltrim($this->className, '\\'));
+
+        return $data;
+    }
+
+    /**
      * Prepare the found class data for storage.
      *
-     * @param string $className
      * @param array  $reflectionParameters
      *
      * @return Container
      */
-    protected function storeClassData(string $className, array $reflectionParameters) : self
+    protected function storeClassData(array $reflectionParameters) : self
     {
-        $storableData = [];
-        /** Go through all parameters. */
-        foreach ($reflectionParameters as $name => $parameter) {
-            /**
-             * If the parameter is scalar, process it.
-             *
-             * N.B. Processing the parameters will happen again later on, after the parameters have been merged with the
-             * user provided arguments, so this does constitute a hit to performance. However, since the results will be
-             * cached, the hit is minimal.
-             *
-             * @todo refactor so we don't have to do this twice.
-             */
-            if ($parameter['type'] == "__scalar__") {
-                /**
-                 * @todo find a way to do this without the try / catch.
-                 */
-                try {
-                    $storableData[$name] = $this->getParameter($name, $parameter);
-                    continue;
-                } catch (Exception $e) {
-                }
-            }
-
-            $storableData[$name] = $parameter['type'];
-        }
-
-        $this->cache->store(ltrim($className, '\\'), $storableData);
+        $this->cache->store(ltrim($this->className, '\\'), $reflectionParameters);
 
         return $this;
     }
@@ -261,6 +256,17 @@ class Container
              * array instead.
              */
             if (isset($givenArguments[$name])) {
+                /**
+                 * If the parameter is variadic, only replace the 'parameter' key with the given argument. We will need
+                 * the other data later on.
+                 */
+                if (!empty($reflectionParameter['is_variadic'])) {
+                    $reflectionParameter['parameter'] = $givenArguments[$name];
+
+                    $mergedParams[$name] = $reflectionParameter;
+                    continue;
+                }
+
                 $mergedParams[$name] = $givenArguments[$name];
                 continue;
             }
@@ -281,23 +287,29 @@ class Container
         /** Get the ReflectionType for the given parameter. */
         $type = $reflectionParameter->getType();
 
+        /** Check if the parameter is variadic (i.e. it accepts multiple arguments). */
+        $isVariadic = $reflectionParameter->isVariadic();
+
         /** If the type is an auto-loadable class, add it to the array. */
         if ($this->rewrites && class_exists((string) $type)) {
             /** Process any rewrites that may have been set in the config. */
             return [
-                'parameter' => $reflectionParameter,
-                'type'      => (string) $this->rewrites->processRewrites((string) $type),
+                'parameter'   => $reflectionParameter,
+                'type'        => (string) $this->rewrites->processRewrites((string) $type),
+                'is_variadic' => $isVariadic
             ];
         } elseif (class_exists((string) $type)) {
             return [
-                'parameter' => $reflectionParameter,
-                'type'      => (string) $type,
+                'parameter'   => $reflectionParameter,
+                'type'        => (string) $type,
+                'is_variadic' => $isVariadic
             ];
         }
 
         return [
-            'parameter' => $reflectionParameter,
-            'type'      => '__scalar__',
+            'parameter'   => $reflectionParameter,
+            'type'        => '__scalar__',
+            'is_variadic' => $isVariadic
         ];
     }
 
@@ -318,7 +330,7 @@ class Container
         /** If the type is an auto-loadable class, add it to the array. */
         if ($this->rewrites && class_exists((string) $type)) {
             /** Process any rewrites that may have been set in the config. */
-            return (string) $this->rewrites->processRewrites($type);
+            return $this->rewrites->processRewrites($type);
         }
 
         if ($this->defaultValues) {
@@ -330,14 +342,13 @@ class Container
         }
 
         /** Otherwise, if it has a default value in the function definition, add that to the array. */
-        if ($reflectionParameter && $reflectionParameter->isDefaultValueAvailable()) {
+        if ($reflectionParameter instanceof \ReflectionParameter
+            && $reflectionParameter->isDefaultValueAvailable()
+        ) {
             return $reflectionParameter->getDefaultValue();
         }
 
-        throw new Exception(
-            "Parameter {$name} cannot be autoloaded, has no default value and was not given" .
-            " as an argument."
-        );
+        return "__scalar__";
     }
 
     /**
@@ -356,17 +367,21 @@ class Container
                 continue;
             }
 
+            if (!is_array($parameter) || !isset($parameter['parameter'])) {
+                $mergedParameters[$name] = $parameter;
+                continue;
+            }
+
             /**
              * Some parameters still need to be processed before autoloading. These are stored as an array with 2 items:
              *  "parameter": \ReflectionParameter
              *  "type": string
              *
-             * @todo move this logic to a separate method or class.
+             *  @todo move this logic to a separate method or class.
              */
-            if (is_array($parameter)
-                && isset($parameter['parameter'])
-                && $parameter['parameter'] instanceof \ReflectionParameter
-            ) {
+
+            /** Process unresolved ReflectionParameters. */
+            if ($parameter['parameter'] instanceof \ReflectionParameter) {
                 /**
                  * Process the parameter array. This will process rewrites and default values.
                  */
@@ -399,6 +414,13 @@ class Container
             ) {
                 $mergedParameters[$name] = $this->create((string) $parameter);
                 continue;
+            }
+
+            if ($parameter == "__scalar__") {
+                throw new Exception(
+                    "Parameter {$name} cannot be autoloaded, has no default value and was not given" .
+                    " as an argument."
+                );
             }
         }
 
