@@ -12,6 +12,10 @@ namespace Di;
 
 class Container
 {
+    /**
+     * A placeholder value used to identify undefined values. These need to be replaced before creating the class
+     * instance or they will lead to an exception.
+     */
     const UNDEFINED_PARAMETER = "__undefined__";
 
     /**
@@ -114,6 +118,11 @@ class Container
     {
         /** Get the ReflectionClass instance for the requested class name. */
         $reflector = $this->getReflector($className);
+
+        if (!$reflector->isInstantiable()) {
+            throw new Exception("Class {$className} is not instantiable.");
+        }
+
         /** Get the ReflectionArgument instance for the class' constructor, if it has one. */
         $constructor = $this->getConstructor($reflector);
 
@@ -168,6 +177,8 @@ class Container
     }
 
     /**
+     * Get the ReflectionMethod for the ReflectionClass' constructor.
+     *
      * @param \ReflectionClass $reflector
      *
      * @return \ReflectionMethod|null
@@ -178,6 +189,8 @@ class Container
     }
 
     /**
+     * Get the parameters from the ReflectionMethod.
+     *
      * @param \ReflectionMethod $reflectionMethod
      *
      * @return array
@@ -186,11 +199,13 @@ class Container
      */
     protected function getReflectedParameters(\ReflectionMethod $reflectionMethod) : array
     {
+        /** Get the mthod's parameters. */
         $parameters = $reflectionMethod->getParameters();
 
         $reflectedParameters = [];
         foreach ($parameters as $parameter) {
-            $reflectedParameters[$parameter->getName()] = $this->getReflectionParameter($parameter);
+            /** Get an array with data about the parameter. This data will be used to process the parameter later on. */
+            $reflectedParameters[$parameter->getName()] = $this->getDiReflectionParameter($parameter);
         }
 
         return $reflectedParameters;
@@ -202,7 +217,7 @@ class Container
      * @return mixed
      * @throws Exception
      */
-    protected function getReflectionParameter(\ReflectionParameter $reflectionParameter)
+    protected function getDiReflectionParameter(\ReflectionParameter $reflectionParameter)
     {
         /** Get the ReflectionType for the given parameter. */
         $type = $reflectionParameter->getType();
@@ -234,13 +249,100 @@ class Container
     }
 
     /**
+     * Retrieve class data from the cache.
+     *
+     * @param string $className
+     *
+     * @return bool|mixed|null
+     */
+    protected function retrieveClassData(string $className)
+    {
+        if (!$this->cache) {
+            return false;
+        }
+
+        $data = $this->cache->retrieve(ltrim($className, '\\'));
+
+        return $data;
+    }
+
+    /**
+     * Store class data in the cache.
+     *
+     * @param array  $reflectionParameters
+     * @param string $className
+     *
+     * @return Container
+     * @todo fix caching for variadic parameters
+     */
+    protected function storeClassData(array $reflectionParameters, string $className) : self
+    {
+        $this->cache->store(ltrim($className, '\\'), $reflectionParameters);
+
+        return $this;
+    }
+
+    /**
+     * Process parameters to add rewrites and default values where needed.
+     *
+     * @param array  $reflectionParameters
+     * @param string $className
+     *
+     * @return array
+     */
+    protected function processParameters(array $reflectionParameters, string $className) : array
+    {
+        /** Loop through all parameters and process them if needed. */
+        foreach ($reflectionParameters as $name => $parameter) {
+            /** Unprocessed scalar values, still need to be processed in order to look for possible default values. */
+            if ($parameter == self::UNDEFINED_PARAMETER) {
+                $reflectionParameters[$name] = $this->getProcessedParameter(
+                    $name,
+                    [
+                        'type' => self::UNDEFINED_PARAMETER,
+                        'parameter' => false
+                    ],
+                    $className
+                );
+                continue;
+            }
+
+            if (!is_array($parameter) || !isset($parameter['parameter'])) {
+                $reflectionParameters[$name] = $parameter;
+                continue;
+            }
+
+            /**
+             * Some parameters still need to be processed before autoloading. These are stored as an array with 2 items:
+             *  "parameter": \ReflectionParameter
+             *  "type": string
+             *
+             *  @todo move this logic to a separate method or class.
+             */
+
+            /** Process unresolved ReflectionParameters. */
+            if ($parameter['parameter'] instanceof \ReflectionParameter) {
+                /**
+                 * Process the parameter array. This will process rewrites and default values.
+                 */
+                $reflectionParameters[$name] = $this->getProcessedParameter($name, $parameter, $className);
+            }
+        }
+
+        return $reflectionParameters;
+    }
+
+    /**
+     * Get the final parameter for the specified parameter array. This method will attempt to rewrite classes and get
+     * default values where applicable.
+     *
      * @param string $name
      * @param array  $parameter
      * @param string $className
      *
      * @return mixed
      */
-    protected function getParameter(string $name, array $parameter, string $className)
+    protected function getProcessedParameter(string $name, array $parameter, string $className)
     {
         /** Get the ReflectionType for the given parameter. */
         $type = $parameter['type'];
@@ -273,90 +375,8 @@ class Container
     }
 
     /**
-     * Retrieve data from the cache.
+     * Merge the generated parameters with the user-supplied parameters.
      *
-     * @param string $className
-     *
-     * @return bool|mixed|null
-     */
-    protected function retrieveClassData(string $className)
-    {
-        if (!$this->cache) {
-            return false;
-        }
-
-        $data = $this->cache->retrieve(ltrim($className, '\\'));
-
-        return $data;
-    }
-
-    /**
-     * Prepare the found class data for storage.
-     *
-     * @param array  $reflectionParameters
-     * @param string $className
-     *
-     * @return Container
-     * @todo fix caching for variadic parameters
-     */
-    protected function storeClassData(array $reflectionParameters, string $className) : self
-    {
-        $this->cache->store(ltrim($className, '\\'), $reflectionParameters);
-
-        return $this;
-    }
-
-    /**
-     * Process parameters to add rewrites and default values where needed.
-     *
-     * @param array  $reflectionParameters
-     * @param string $className
-     *
-     * @return array
-     */
-    protected function processParameters(array $reflectionParameters, string $className) : array
-    {
-        /** Loop through all parameters and process them if needed. */
-        foreach ($reflectionParameters as $name => $parameter) {
-            /** Unprocessed scalar values, still need to be processed in order to look for possible default values. */
-            if ($parameter == self::UNDEFINED_PARAMETER) {
-                $reflectionParameters[$name] = $this->getParameter(
-                    $name,
-                    [
-                        'type' => self::UNDEFINED_PARAMETER,
-                        'parameter' => false
-                    ],
-                    $className
-                );
-                continue;
-            }
-
-            if (!is_array($parameter) || !isset($parameter['parameter'])) {
-                $reflectionParameters[$name] = $parameter;
-                continue;
-            }
-
-            /**
-             * Some parameters still need to be processed before autoloading. These are stored as an array with 2 items:
-             *  "parameter": \ReflectionParameter
-             *  "type": string
-             *
-             *  @todo move this logic to a separate method or class.
-             */
-
-            /** Process unresolved ReflectionParameters. */
-            if ($parameter['parameter'] instanceof \ReflectionParameter) {
-                /**
-                 * Process the parameter array. This will process rewrites and default values.
-                 */
-                $reflectionParameters[$name] = $this->getParameter($name, $parameter, $className);
-            }
-        }
-
-        return $reflectionParameters;
-    }
-
-    /**
      * @param \ReflectionParameter[]|string[] $reflectionParameters
      * @param mixed[]                         $givenArguments
      *
@@ -399,6 +419,9 @@ class Container
     }
 
     /**
+     * Load the specified parameters. Any scalar parameters are ignored. Any undefined parameters that can still not be
+     * processed, will trigger an exception.
+     *
      * @param mixed[] $mergedParameters
      *
      * @return object[]
@@ -435,6 +458,8 @@ class Container
     }
 
     /**
+     * Create a new instance of the specified class. This ends the build-process.
+     *
      * @param \ReflectionClass $reflectionClass
      * @param string $className
      * @param array|null $params
