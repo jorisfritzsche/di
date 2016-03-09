@@ -160,6 +160,9 @@ class Container
              * @todo refactor so we don't have to do this twice.
              */
             if ($parameter['type'] == "__scalar__") {
+                /**
+                 * @todo find a way to do this without the try / catch.
+                 */
                 try {
                     $storableData[$name] = $this->getParameter($name, $parameter);
                     continue;
