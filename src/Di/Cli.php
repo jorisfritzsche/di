@@ -137,11 +137,11 @@ class Cli
             echo "Are you sure you wish to clear the config? This action cannot be undone! [yN]";
 
             /** Read the response. */
-            $handle = fopen ("php://stdin", "r");
+            $handle = fopen("php://stdin", "r");
             $line = fgets($handle);
 
             /** If the response is not 'Y' or 'y', abort the operation. */
-            if(strcasecmp(trim($line), 'y') !== 0){
+            if (strcasecmp(trim($line), 'y') !== 0) {
                 echo "\e[31mABORTING!\033[0m" . PHP_EOL;
                 return;
             }
@@ -237,6 +237,8 @@ VERSION;
      */
     protected function help()
     {
+        // @codingStandardsIgnoreStart
+        /** Ignoring PHP CS, because of line length limitations. */
         $this->showVersion();
         echo <<<USAGE
 
@@ -251,6 +253,7 @@ VERSION;
   \033[32m--clear-config\033[0m         Clear the config JSON files. Beware: this action cannot be undone. This operation accepts a comma-separated list of configs to clear. If no configs are specified, all will be cleared.
 
 USAGE;
+        // @codingStandardsIgnoreEnd
     }
 
     /**

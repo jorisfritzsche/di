@@ -38,15 +38,18 @@ class Container
     protected $className;
 
     /**
-     * Factory constructor.
+     * Container constructor.
      *
      * @param Config\Rewrites      $rewrites
      * @param Config\DefaultValues $defaultValues
      * @param Cache\Classes        $cache
      */
     public function __construct(
-        Config\Rewrites $rewrites = null, Config\DefaultValues $defaultValues = null, Cache\Classes $cache = null
+        Config\Rewrites $rewrites = null,
+        Config\DefaultValues $defaultValues = null,
+        Cache\Classes $cache = null
     ) {
+        /** Load required classes if they have not been passed as parameters. */
         if (!$rewrites) {
             $rewrites = $this->create("Di\\Config\\Rewrites");
         }
@@ -101,12 +104,12 @@ class Container
 
         /** if no constructor is defined, simply return a new instance of the class. */
         if (!$constructor) {
-            return $this->createNewInstance($reflector, null, $className);
+            return $this->createNewInstance($reflector, $className);
         }
 
         /** If the constructor has not parameters, simply return a new instance of the class. */
         if ($constructor->getNumberOfParameters() == 0) {
-            return $this->createNewInstance($reflector, null, $className);
+            return $this->createNewInstance($reflector, $className);
         }
 
         /** Get the parameters from the cache, if available. */
@@ -125,14 +128,14 @@ class Container
         /** Merge the parameters with the already provided arguments. */
         $mergedParameters = $this->mergeParams($reflectionParameters, $givenArguments);
 
-        /** Process the paramaters to look for default values and to process rewrites. */
+        /** Process the parameters to look for default values and to process rewrites. */
         $processedParameters = $this->processParameters($mergedParameters);
 
         /** Load the arguments. Please note: this may be recursive. */
         $loadedParameters = $this->loadParameters($processedParameters);
 
         /** return a new instance of the requested class with the loaded arguments. */
-        return $this->createNewInstance($reflector, $loadedParameters, $className);
+        return $this->createNewInstance($reflector, $className, $loadedParameters);
     }
 
     /**
@@ -152,7 +155,7 @@ class Container
              * If the parameter is scalar, process it.
              *
              * N.B. Processing the parameters will happen again later on, after the parameters have been merged with the
-             * user provided arguments, so this does constitude a hit to performance. However, since the results will be
+             * user provided arguments, so this does constitute a hit to performance. However, since the results will be
              * cached, the hit is minimal.
              *
              * @todo refactor so we don't have to do this twice.
@@ -178,12 +181,12 @@ class Container
 
     /**
      * @param \ReflectionClass $reflectionClass
-     * @param array|null $params
      * @param string $className
+     * @param array|null $params
      *
      * @return object
      */
-    protected function createNewInstance(\ReflectionClass $reflectionClass, array $params = null, string $className)
+    protected function createNewInstance(\ReflectionClass $reflectionClass, string $className, array $params = null)
     {
         /** Remove the class from the array of classes being processed. */
         unset($this->processingClasses[$className]);

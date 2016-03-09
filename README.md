@@ -51,7 +51,7 @@ Joris Fritzsche - joris.fritzsche@outlook.com
 * Full support for environment variables
 * Refactor CLI class
 * Think of a decent name for this project
-* Unittests
+* Unit tests
 * Support for variadic parameters
 * Additional caching for various config values
 * Read config values through CLI

@@ -10,7 +10,6 @@ declare(strict_types = 1);
 
 namespace Di\Config;
 
-
 class Rewrites extends AbstractConfig
 {
     const CONFIG_FILE = 'rewrites.json';

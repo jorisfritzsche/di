@@ -1,4 +1,4 @@
-#!/Applications/MAMP/bin/php/php7.0.0/bin/php
+#!/usr/bin/php
 <?php
 
 /**
@@ -15,10 +15,9 @@ try {
      *
      * @param string $className
      */
-    function diCliAutoload(string $className) {
-        $src = dirname(
-                dirname(__FILE__)
-            )
+    function diCliAutoload(string $className)
+    {
+        $src = dirname(dirname(__FILE__))
             . DIRECTORY_SEPARATOR
             . 'src'
             . DIRECTORY_SEPARATOR
@@ -45,4 +44,3 @@ try {
     echo "\033[31m" . $e->getMessage() . PHP_EOL . PHP_EOL;
     echo "\e[34mStack trace:" . $e->getTraceAsString() . "\033[0m" . PHP_EOL;
 }
-
