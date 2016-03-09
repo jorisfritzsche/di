@@ -41,7 +41,7 @@ bin/di --clear-config=some_config
 # About
 
 ## Requirements
-* DI requires PHP 7.0 or above.
+* PHP 7.0 or above.
 
 ## Author
 Joris Fritzsche - joris.fritzsche@outlook.com
