@@ -413,6 +413,7 @@ USAGE;
      */
     protected function clearConfig()
     {
+        /** @var Config\Configs $config */
         $config = $this->container->create("Di\\Config\\Configs");
 
         $configsToClear = $this->clearConfig;
