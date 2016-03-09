@@ -10,6 +10,10 @@ declare(strict_types = 1);
 
 namespace Di;
 
+/**
+ * @todo Currently there are two ways parameters are passed throught his class: as an associative array or as a discrete
+ *       value. These two methods should be standardized.
+ */
 class Container
 {
     /**
@@ -261,6 +265,17 @@ class Container
              * array instead.
              */
             if (isset($givenArguments[$name])) {
+                /**
+                 * If the parameter is variadic, only replace the 'parameter' key with the given argument. We will need
+                 * the other data later on.
+                 */
+                if (!empty($reflectionParameter['is_variadic'])) {
+                    $reflectionParameter['parameter'] = $givenArguments[$name];
+
+                    $mergedParams[$name] = $reflectionParameter;
+                    continue;
+                }
+
                 $mergedParams[$name] = $givenArguments[$name];
                 continue;
             }
@@ -281,23 +296,29 @@ class Container
         /** Get the ReflectionType for the given parameter. */
         $type = $reflectionParameter->getType();
 
+        /** Check if the parameter is variadic (i.e. it accepts multiple arguments). */
+        $isVariadic = $reflectionParameter->isVariadic();
+
         /** If the type is an auto-loadable class, add it to the array. */
         if ($this->rewrites && class_exists((string) $type)) {
             /** Process any rewrites that may have been set in the config. */
             return [
-                'parameter' => $reflectionParameter,
-                'type'      => (string) $this->rewrites->processRewrites((string) $type),
+                'parameter'   => $reflectionParameter,
+                'type'        => (string) $this->rewrites->processRewrites((string) $type),
+                'is_variadic' => $isVariadic
             ];
         } elseif (class_exists((string) $type)) {
             return [
-                'parameter' => $reflectionParameter,
-                'type'      => (string) $type,
+                'parameter'   => $reflectionParameter,
+                'type'        => (string) $type,
+                'is_variadic' => $isVariadic
             ];
         }
 
         return [
-            'parameter' => $reflectionParameter,
-            'type'      => '__scalar__',
+            'parameter'   => $reflectionParameter,
+            'type'        => '__scalar__',
+            'is_variadic' => $isVariadic
         ];
     }
 
@@ -361,8 +382,23 @@ class Container
              *  "parameter": \ReflectionParameter
              *  "type": string
              *
-             * @todo move this logic to a separate method or class.
+             *  @todo move this logic to a separate method or class.
              */
+
+            /** Process variadic parameters. */
+            if (is_array($parameter)
+                && isset($parameter['parameter'])
+                && is_array($parameter['parameter'])
+                && !empty($parameter['is_variadic'])
+            ) {
+                unset($mergedParameters[$name]);
+                foreach ($parameter['parameter'] as $key => $variadicParameter) {
+                    $mergedParameters[$name . $key] = $variadicParameter;
+                }
+                continue;
+            }
+
+            /** Process unresolved ReflectioNparameters. */
             if (is_array($parameter)
                 && isset($parameter['parameter'])
                 && $parameter['parameter'] instanceof \ReflectionParameter
