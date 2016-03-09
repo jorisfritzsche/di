@@ -16,6 +16,8 @@ namespace Di;
  */
 class Container
 {
+    const UNDEFINED_PARAMETER = "__undefined__";
+
     /**
      * @var Config\Rewrites
      */
@@ -123,7 +125,7 @@ class Container
             $skipCache = true;
         } else {
             /** Get the parameters of the constructor. */
-            $reflectionParameters = $this->getMethodParams($constructor);
+            $reflectionParameters = $this->getReflectedParameters($constructor);
         }
 
         /** Process the parameters to look for default values and to process rewrites. */
@@ -224,16 +226,16 @@ class Container
      *
      * @throws Exception
      */
-    protected function getMethodParams(\ReflectionMethod $reflectionMethod) : array
+    protected function getReflectedParameters(\ReflectionMethod $reflectionMethod) : array
     {
         $parameters = $reflectionMethod->getParameters();
 
-        $processedParameters = [];
+        $reflectedParameters = [];
         foreach ($parameters as $parameter) {
-            $processedParameters[$parameter->getName()] = $this->getParameterType($parameter);
+            $reflectedParameters[$parameter->getName()] = $this->getReflectionParameter($parameter);
         }
 
-        return $processedParameters;
+        return $reflectedParameters;
     }
 
     /**
@@ -270,6 +272,8 @@ class Container
                 $mergedParams[$name] = $givenArguments[$name];
                 continue;
             }
+
+            /** If no argument was given for this parameter, add the processed parameter to the array. */
             $mergedParams[$name] = $reflectionParameter;
         }
 
@@ -282,7 +286,7 @@ class Container
      * @return mixed
      * @throws Exception
      */
-    protected function getParameterType(\ReflectionParameter $reflectionParameter)
+    protected function getReflectionParameter(\ReflectionParameter $reflectionParameter)
     {
         /** Get the ReflectionType for the given parameter. */
         $type = $reflectionParameter->getType();
@@ -308,7 +312,7 @@ class Container
 
         return [
             'parameter'   => $reflectionParameter,
-            'type'        => '__scalar__',
+            'type'        => self::UNDEFINED_PARAMETER,
             'is_variadic' => $isVariadic
         ];
     }
@@ -348,7 +352,8 @@ class Container
             return $reflectionParameter->getDefaultValue();
         }
 
-        return "__scalar__";
+        /**  */
+        return self::UNDEFINED_PARAMETER;
     }
 
     /**
@@ -361,9 +366,15 @@ class Container
     {
         /** Loop through all parameters and process them if needed. */
         foreach ($mergedParameters as $name => $parameter) {
-            /** unprocessed scalar values, still need to be processed in order to look for possible default values. */
-            if ($parameter == "__scalar__") {
-                $mergedParameters[$name] = $this->getParameter($name, ['type' => "__scalar__", 'parameter' => false]);
+            /** Unprocessed scalar values, still need to be processed in order to look for possible default values. */
+            if ($parameter == self::UNDEFINED_PARAMETER) {
+                $mergedParameters[$name] = $this->getParameter(
+                    $name,
+                    [
+                        'type' => self::UNDEFINED_PARAMETER,
+                        'parameter' => false
+                    ]
+                );
                 continue;
             }
 
@@ -416,7 +427,8 @@ class Container
                 continue;
             }
 
-            if ($parameter == "__scalar__") {
+            /** Any parameters that are still labeled as "__undefined__" could not be processed. */
+            if ($parameter == self::UNDEFINED_PARAMETER) {
                 throw new Exception(
                     "Parameter {$name} cannot be autoloaded, has no default value and was not given" .
                     " as an argument."
