@@ -1,23 +1,52 @@
 <?php
 
+/*
+ * This file is part of the Di package.
+ *
+ * (c) Joris Fritzsche <joris.fritzsche@outlook.com>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+declare(strict_types = 1);
+
 namespace Di;
 
 class Factory
 {
     /**
-     * @var Config
+     * @var Config\Rewrites
      */
-    public $config;
+    public $rewrites;
+
+    /**
+     * @var Config\DefaultValues
+     */
+    public $defaultValues;
+
+    /**
+     * @var Cache\Classes
+     */
+    public $cache;
+
+    /**
+     * @var array
+     */
+    protected $processingClasses = [];
 
     /**
      * Factory constructor.
      */
     public function __construct()
     {
-        $config = new Config();
-        $config->init();
+        $rewrites      = new Config\Rewrites();
+        $defaultValues = new Config\DefaultValues();
+        $cache         = new Cache\Classes();
 
-        $this->config = $config;
+        $this->rewrites      = $rewrites;
+        $this->defaultValues = $defaultValues;
+        $this->cache         = $cache;
     }
 
     /**
@@ -37,6 +66,17 @@ class Factory
             throw new Exception("Class {$className} does not exist.");
         }
 
+        /** Make sure this class is not already being processed, in order to prevent infinite recursion. */
+        if (isset($this->processingClasses[$className])) {
+            throw new Exception(
+                "Class {$className} is already being processed. This probably means that one or more classes require "
+                . "each other, causing an infinite loop."
+            );
+        }
+
+        /** Add the requested class name to the array of classes being processed. */
+        $this->processingClasses[$className] = true;
+
         /** Get the ReflectionClass instance for the requested class name. */
         $reflector = $this->getReflector($className);
         /** Get the ReflectionArgument instance for the class' constructor, if it has one. */
@@ -44,23 +84,51 @@ class Factory
 
         /** if no constructor is defined, simply return a new instance of the class. */
         if (!$constructor) {
-            return $reflector->newInstance();
+            return $this->createNewInstance($reflector, null, $className);
         }
 
         /** If the constructor has not parameters, simply return a new instance of the class. */
         if ($constructor->getNumberOfParameters() == 0) {
-            return $reflector->newInstance();
+            return $this->createNewInstance($reflector, null, $className);
         }
 
-        /** Get the paremeters of the constructor. */
-        $reflectionParameters = $this->getMethodParams($constructor);
+        $reflectionParameters = $this->cache->retrieve($className);
+        if (!$reflectionParameters) {
+            /** Get the paremeters of the constructor. */
+            $reflectionParameters = $this->getMethodParams($constructor);
+
+            $this->cache->store($className, $reflectionParameters);
+        }
+
         /** Merge the parameters with the already provided arguments. */
         $mergedParameters = $this->mergeParams($reflectionParameters, $givenArguments);
+
         /** Load the arguments. Please note: this may be recursive. */
         $loadedParameters = $this->loadParameters($mergedParameters);
 
         /** return a new instance of the requested class with the loaded arguments. */
-        return $reflector->newInstanceArgs($loadedParameters);
+        return $this->createNewInstance($reflector, $loadedParameters, $className);
+    }
+
+    /**
+     * @param \ReflectionClass $reflectionClass
+     * @param array|null $params
+     * @param string $className
+     *
+     * @return object
+     */
+    protected function createNewInstance(\ReflectionClass $reflectionClass, array $params = null, string $className)
+    {
+        /** Remove the class from the array of classes being processed. */
+        unset($this->processingClasses[$className]);
+
+        /** If the class should be loaded with parameters, do so. */
+        if (!empty($params)) {
+            return $reflectionClass->newInstanceArgs($params);
+        }
+
+        /** Load the class without parameters. */
+        return $reflectionClass->newInstance();
     }
 
     /**
@@ -70,7 +138,7 @@ class Factory
      *
      * @return \ReflectionClass
      */
-    protected function getReflector(string $className)
+    protected function getReflector(string $className) : \ReflectionClass
     {
         return new \ReflectionClass($className);
     }
@@ -87,39 +155,45 @@ class Factory
 
     /**
      * @param \ReflectionMethod $reflectionMethod
-     * @return \ReflectionParameter[]
+     * @return string[]
      */
-    protected function getMethodParams(\ReflectionMethod $reflectionMethod)
+    protected function getMethodParams(\ReflectionMethod $reflectionMethod) : array
     {
         $parameters = $reflectionMethod->getParameters();
 
-        return $parameters;
+        $processedParameters = [];
+        foreach ($parameters as $parameter) {
+            $processedParameters[$parameter->getName()] = $this->getParameter($parameter);
+        }
+
+        return $processedParameters;
     }
 
     /**
-     * @param \ReflectionParameter[] $reflectionParameters
-     * @param mixed[]                $givenArguments
+     * @param \ReflectionParameter[]|string[] $reflectionParameters
+     * @param mixed[]                         $givenArguments
      *
      * @return mixed[]
      *
      * @throws Exception
      */
-    protected function mergeParams(array $reflectionParameters, array $givenArguments)
+    protected function mergeParams(array $reflectionParameters, array $givenArguments) : array
     {
         /** Create an array of parameters. */
         $mergedParams = [];
         /** Start by looping through all ReflectionParameters. */
-        foreach ($reflectionParameters as $reflectionParameter) {
+        foreach ($reflectionParameters as $name => $reflectionParameter) {
+
             /**
              * If an argument is given with the same name as the ReflectionParameter's name. Add the argument to the
              * array instead.
              */
-            if (isset($givenArguments[$reflectionParameter->getName()])) {
-                $mergedParams[$reflectionParameter->getName()] = $givenArguments[$reflectionParameter->getName()];
+            if (isset($givenArguments[$name])) {
+                $mergedParams[$name] = $givenArguments[$name];
                 continue;
             }
 
-            $mergedParams[$reflectionParameter->getName()] = $this->getParameter($reflectionParameter);
+            $mergedParams[$name] = $reflectionParameter;
         }
 
         return $mergedParams;
@@ -140,13 +214,13 @@ class Factory
         $type = $reflectionParameter->getType();
 
         /** If the type is an auto-loadable class, add it to the array. */
-        if (class_exists($type)) {
+        if (class_exists((string) $type)) {
             /** Process any rewrites that may have been set in the config. */
-            return $this->config->processRewrites($type);
+            return (string) $this->rewrites->processRewrites($type);
         }
 
         /** If this parameter has a default value specified in the DI config, add that to the array */
-        $defaultDiValue = $this->config->getDefaultDiValue($reflectionParameter);
+        $defaultDiValue = $this->defaultValues->getDefaultDiValue($reflectionParameter);
         if ($defaultDiValue) {
             return $defaultDiValue;
         }
@@ -174,7 +248,7 @@ class Factory
      *
      * @throws Exception
      */
-    protected function loadParameters(array $mergedParameters)
+    protected function loadParameters(array $mergedParameters) : array
     {
         /** Loop through all parameters and load them if possible. */
         foreach ($mergedParameters as $name => $parameter) {
@@ -182,7 +256,11 @@ class Factory
              * If the parameter can be autoloaded, do so using this class' getter. This way we can recursively inject
              * dependencies.
              */
-            if ($parameter instanceof \ReflectionType || class_exists($parameter)) {
+            if ($parameter instanceof \ReflectionType
+                || (is_string($parameter)
+                    && class_exists($parameter)
+                )
+            ) {
                 $mergedParameters[$name] = $this->get($parameter);
             }
         }
