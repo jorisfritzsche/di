@@ -62,3 +62,4 @@ Joris Fritzsche - joris.fritzsche@outlook.com
 * Additional caching for various config values
 * Read config values through CLI
 * Move CLI to a separate package
+* ~~Add singleton support~~
