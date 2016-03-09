@@ -19,7 +19,13 @@ $ composer require jorisfritzsche/di
 <?php
 $container = new \Di\Container();
 
-$test = $container->get('\SomeNameSpace\SomeClass');
+$test1 = $container->get('\SomeNameSpace\SomeClass');
+$test2 = $container->get('\SomeNameSpace\SomeClass', ['someParameter' => 'some_value']);
+$test3 = $container->get(
+    '\SomeNameSpace\SomeClass', 
+    ['someParameter' => 'some_value'], 
+    $container::FLAG_SINGLETON | $container::FLAG_NO_REWRITE | $container::FLAG_NO_DEFAULT_VALUE | $container::FLAG_NO_CACHE
+);
 
 ```
 
@@ -55,4 +61,3 @@ Joris Fritzsche - joris.fritzsche@outlook.com
 * Support for variadic parameters
 * Additional caching for various config values
 * Read config values through CLI
-* Support for singletons
