@@ -10,9 +10,28 @@ declare(strict_types = 1);
 
 namespace Di\Config;
 
+use Di\FileLoader\Json;
+
 class Application extends AbstractConfig
 {
     const CONFIG_FILE = 'application.json';
+
+    /**
+     * @var Environments
+     */
+    protected $environments;
+
+    /**
+     * Application constructor.
+     * @param Json $fileLoader
+     * @param Environments $environments
+     */
+    public function __construct(Json $fileLoader, Environments $environments)
+    {
+        parent::__construct($fileLoader);
+
+        $this->environments = $environments;
+    }
 
     /**
      * @param string $env
@@ -23,10 +42,8 @@ class Application extends AbstractConfig
      */
     public function setEnv(string $env) : self
     {
-        $envConfig = new Environments();
-
         /** Get the available environments. */
-        $availableEnvironments = array_keys($envConfig->data);
+        $availableEnvironments = array_keys($this->environments->data);
         if (!in_array($env, $availableEnvironments)) {
             /**
              * If the desired environment is not available, throw an exception with information on which environments
