@@ -37,7 +37,7 @@ try {
     /** Instantiate the CLI and execute the operation. */
     $cli = new \Di\Cli();
     $cli->execute();
-    $cli->output("Operation completed.", true);
+    $cli->output("Operation completed.", null, true);
 } catch (\Exception $e) {
     echo "\033[31m" . $e->getMessage() . PHP_EOL . PHP_EOL;
     echo "\e[34mStack trace:" . $e->getTraceAsString() . "\033[0m" . PHP_EOL;
