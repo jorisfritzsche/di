@@ -55,3 +55,4 @@ Joris Fritzsche - joris.fritzsche@outlook.com
 * Support for variadic parameters
 * Additional caching for various config values
 * Read config values through CLI
+* Support for singletons
