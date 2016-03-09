@@ -112,8 +112,6 @@ class Container
         /** Get the parameters from the cache, if available. */
         $reflectionParameters = false;
         if ($this->cache) {
-            var_dump($this->cache, $className);
-            echo '==============' . PHP_EOL;
             $reflectionParameters = $this->cache->retrieve(ltrim($className, '\\'));
         }
 
