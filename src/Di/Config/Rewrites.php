@@ -15,13 +15,33 @@ class Rewrites extends AbstractConfig
     const CONFIG_FILE = 'rewrites.json';
 
     /**
+     * Add a new rewrite or replace an existing one.
+     *
      * @param array $rewrite
      *
      * @return self
+     *
+     * @todo validate the new rewrite.
      */
     public function addRewrite(array $rewrite) : self
     {
         $this->data = array_merge_recursive($this->data, $rewrite);
+
+        return $this;
+    }
+
+    /**
+     * Remove an existing rewrite.
+     *
+     * @param string $className
+     *
+     * @return Rewrites
+     */
+    public function removeRewrite(string $className) : self
+    {
+        if (isset($this->data[$className])) {
+            unset($this->data[$className]);
+        }
 
         return $this;
     }

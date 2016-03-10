@@ -198,7 +198,7 @@ class ContainerTest extends \PHPUnit_Framework_TestCase
         /** @var \Di\Container $container */
         $container = new $this->className;
 
-        $this->setExpectedException("\\Di\\Exception");
+        $this->expectException("\\Di\\Exception");
 
         $container->create("\\Di\\Tests\\TestClasses\\TestD", [], $container::FLAG_NO_CACHE);
     }
@@ -227,5 +227,51 @@ class ContainerTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($class instanceof TestB);
         $this->assertFalse($class->a instanceof TestC);
         $this->assertTrue($class->a instanceof TestA);
+    }
+
+    public function testNonExistingClass()
+    {
+        /** @var \Di\Container $container */
+        $container = new $this->className;
+
+        $this->expectException("\\Di\\Exception");
+        $this->expectExceptionMessage("Class SomeNonExistingClass does not exist.");
+
+        $container->create("SomeNonExistingClass", [], $container::FLAG_NO_CACHE);
+    }
+
+    public function testIncludeLoop()
+    {
+        /** @var \Di\Container $container */
+        $container = new $this->className;
+
+        $this->expectException("\\Di\\Exception");
+        $this->expectExceptionMessage(
+            "Class Di\\Tests\\TestClasses\\TestE is already being processed. This probably means that one or more"
+            . " classes require each other, causing an infinite loop."
+        );
+
+        $container->create("\\Di\\Tests\\TestClasses\\TestE", [], $container::FLAG_NO_CACHE);
+    }
+
+    public function testNonInstantiableClass()
+    {
+        /** @var \Di\Container $container */
+        $container = new $this->className;
+
+        $this->expectException("\\Di\\Exception");
+        $this->expectExceptionMessage("Class \\Di\\Tests\\TestClasses\\TestF is not instantiable.");
+
+        $container->create("\\Di\\Tests\\TestClasses\\TestF", [], $container::FLAG_NO_CACHE);
+    }
+
+    public function testDefaultParameterValue()
+    {
+        /** @var \Di\Container $container */
+        $container = new $this->className;
+
+        $class = $container->create("\\Di\\Tests\\TestClasses\\TestG", [], $container::FLAG_NO_CACHE);
+
+        $this->assertSame($class->g, "default_value");
     }
 }

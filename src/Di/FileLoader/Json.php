@@ -75,8 +75,7 @@ class Json implements FileLoaderInterface
         }
 
         $json = json_decode($data, true);
-        if ($json === false) {
-            var_dump($data);
+        if ($json === false || $json === null) {
             throw new Exception("File {$file} does not contain valid JSON.");
         }
 
