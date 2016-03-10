@@ -407,7 +407,7 @@ USAGE;
 
         /** @var \Di\Cache\AbstractCache $cacheToClear */
         $cacheToClear = $this->container->create($className);
-        $cacheToClear->clear();
+        $cacheToClear->clear(true);
         $this->output("Cache type cleared: " . $cacheType, self::OUTPUT_LEVEL_NOTICE);
     }
 

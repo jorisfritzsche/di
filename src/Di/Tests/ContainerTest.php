@@ -202,4 +202,30 @@ class ContainerTest extends \PHPUnit_Framework_TestCase
 
         $container->create("\\Di\\Tests\\TestClasses\\TestD", [], $container::FLAG_NO_CACHE);
     }
+
+    public function testCache()
+    {
+        /** @var \Di\Container $container */
+        $container = new $this->className;
+
+        $container->cache->store("Di\\Tests\\TestClasses\\TestB", ['a' => "\\Di\\Tests\\TestClasses\\TestC"]);
+
+        $class = $container->create("\\Di\\Tests\\TestClasses\\TestB");
+        $this->assertTrue($class instanceof TestB);
+        $this->assertTrue($class->a instanceof TestC);
+        $this->assertTrue($class->a instanceof TestA);
+    }
+
+    public function testNoCacheFlag()
+    {
+        /** @var \Di\Container $container */
+        $container = new $this->className;
+
+        $container->cache->store("Di\\Tests\\TestClasses\\TestB", ['a' => "\\Di\\Tests\\TestClasses\\TestC"]);
+
+        $class = $container->create("\\Di\\Tests\\TestClasses\\TestB", [], $container::FLAG_NO_CACHE);
+        $this->assertTrue($class instanceof TestB);
+        $this->assertFalse($class->a instanceof TestC);
+        $this->assertTrue($class->a instanceof TestA);
+    }
 }
