@@ -15,18 +15,40 @@ class DefaultValues extends AbstractConfig
     const CONFIG_FILE = 'default_values.json';
 
     /**
+     * Add a new default value or replace an existing one.
+     *
      * @param string $className
      * @param array  $defaultValue
      *
      * @return self
+     *
+     * @todo validate the default value.
      */
     public function addDefaultValue(string $className, array $defaultValue) : self
     {
         if (isset($this->data[$className])) {
-            $defaultValue = array_merge($this->data[$className], $defaultValue);
+            $defaultValue = array_merge_recursive($this->data[$className], $defaultValue);
         }
 
         $this->data[$className] = $defaultValue;
+        return $this;
+    }
+
+    /**
+     * Remove an existing default value.
+     *
+     * @param string $className
+     *
+     * @return DefaultValues
+     *
+     * @todo Allow for removing specific parameters per class.
+     */
+    public function removeDefaultValue(string $className) : self
+    {
+        if (isset($this->data[$className])) {
+            unset($this->data[$className]);
+        }
+
         return $this;
     }
 
