@@ -75,7 +75,10 @@ class Cli
             $this->container = new Container();
         }
 
-        /** This is a list of all available and accepted options. */
+        /**
+         * This is a list of all available and accepted options.
+         * @todo get available operations from config file with callbacks.
+         */
         $options = getopt(
             'hv',
             [
