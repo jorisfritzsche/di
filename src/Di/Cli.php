@@ -5,17 +5,16 @@
  * @license MIT
  * @author Joris Fritzsche (joris.fritzsche@outlook.com)
  */
-
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Di;
 
 class Cli
 {
     /** Available output levels. */
-    const OUTPUT_LEVEL_NOTICE  = 1;
+    const OUTPUT_LEVEL_NOTICE = 1;
     const OUTPUT_LEVEL_WARNING = 2;
-    const OUTPUT_LEVEL_ERROR   = 3;
+    const OUTPUT_LEVEL_ERROR = 3;
 
     /**
      * @var Container
@@ -75,7 +74,7 @@ class Cli
             $this->container = new Container();
         }
 
-        /**
+        /*
          * This is a list of all available and accepted options.
          * @todo get available operations from config file with callbacks.
          */
@@ -100,36 +99,39 @@ class Cli
      * Check which operation was requested and validate the parameters provided.
      *
      * @param array $options
+     *
      * @throws Cli\Exception
      */
     protected function setOperations(array $options)
     {
-        /** Check if verbose mode was requested. */
+        /* Check if verbose mode was requested. */
         if (isset($options['v']) || isset($options['verbose'])) {
             $this->verbose = true;
-            /**
+            /*
              * Unlike the other checks in this method, verbose mode is not an operation and can therefore be used in
              * conjunction with any operation.
              */
         }
 
-        /** Check if the 'help' operation was requested. */
+        /* Check if the 'help' operation was requested. */
         if (isset($options['h']) || isset($options['help'])) {
             $this->help = true;
+
             return;
         }
 
-        /** Check if the 'version' operation was requested. */
+        /* Check if the 'version' operation was requested. */
         if (isset($options['version'])) {
             $this->showVersion = true;
+
             return;
         }
 
-        /** Check if the 'add-rewrite' operation was requested. */
+        /* Check if the 'add-rewrite' operation was requested. */
         if (isset($options['add-rewrite'])) {
-            /** Add-rewrite requires a JSON-encoded string with the rewrite that needs to be added. */
+            /* Add-rewrite requires a JSON-encoded string with the rewrite that needs to be added. */
             $rewrites = json_decode($options['add-rewrite'], true);
-            /** If no rewrites were supplied, throw an error. */
+            /* If no rewrites were supplied, throw an error. */
             if (!$rewrites) {
                 throw new Cli\Exception(
                     "Invalid rewrite given: {$options['add-rewrite']}. Rewrites must be given in JSON format."
@@ -137,40 +139,43 @@ class Cli
             }
 
             $this->addRewrite = $rewrites;
+
             return;
         }
 
-        /** Check if the 'add-default-value' operation was requested. */
+        /* Check if the 'add-default-value' operation was requested. */
         if (isset($options['add-default-value'])) {
-            /** Add-default-value requires a JSON-encoded string with the default value that needs to be added. */
+            /* Add-default-value requires a JSON-encoded string with the default value that needs to be added. */
             $defaultValues = json_decode($options['add-default-value'], true);
-            /** If no default values were supplied, throw an error. */
+            /* If no default values were supplied, throw an error. */
             if (!$defaultValues) {
                 throw new Cli\Exception(
-                    "Invalid default value given: {$options['add-default-value']}. Default values must be given in" .
-                    " JSON format."
+                    "Invalid default value given: {$options['add-default-value']}. Default values must be given in".
+                    ' JSON format.'
                 );
             }
 
             $this->addDefaultValue = $defaultValues;
+
             return;
         }
 
-        /** Check if the 'set-env' operation was requested. */
+        /* Check if the 'set-env' operation was requested. */
         if (isset($options['set-env'])) {
-            /**
+            /*
              * Set-env requires an environment to be set. Whether the requested environment was valid will be checked
              * later.
              */
             $env = $options['set-env'];
 
             $this->setEnv = $env;
+
             return;
         }
 
-        /** Check if the 'clear-cache' operation was requested. */
+        /* Check if the 'clear-cache' operation was requested. */
         if (isset($options['clear-cache'])) {
-            /** Get the specified caches to be cleared. If no caches are specified, clear them all. */
+            /* Get the specified caches to be cleared. If no caches are specified, clear them all. */
             if (!empty($options['clear-cache'])) {
                 $caches = explode(',', $options['clear-cache']);
             } else {
@@ -178,43 +183,46 @@ class Cli
             }
 
             $this->clearCaches = $caches;
+
             return;
         }
 
-        /** Check if the 'clear-config' operation was requested. */
+        /* Check if the 'clear-config' operation was requested. */
         if (isset($options['clear-config'])) {
-            /** Prompt the user in order to make sure they know that this action cannot be undone. */
+            /* Prompt the user in order to make sure they know that this action cannot be undone. */
             $this->output(
-                "Are you sure you wish to clear the config? This action cannot be undone! [yN]",
+                'Are you sure you wish to clear the config? This action cannot be undone! [yN]',
                 self::OUTPUT_LEVEL_WARNING,
                 true
             );
 
-            /** Read the response. */
-            $handle = fopen("php://stdin", "r");
+            /* Read the response. */
+            $handle = fopen('php://stdin', 'r');
             $line = fgets($handle);
 
-            /** If the response is not 'Y' or 'y', abort the operation. */
+            /* If the response is not 'Y' or 'y', abort the operation. */
             if (strcasecmp(trim($line), 'y') !== 0) {
-                $this->output("ABORTING!", self::OUTPUT_LEVEL_ERROR, true);
+                $this->output('ABORTING!', self::OUTPUT_LEVEL_ERROR, true);
+
                 return;
             }
 
-            /** get the specified configs to be cleared. If no configs are specified, clear them all. */
+            /* get the specified configs to be cleared. If no configs are specified, clear them all. */
             if (!empty($options['clear-config'])) {
                 $configs = explode(',', $options['clear-config']);
             } else {
                 $configs = true;
             }
 
-            /** Flag the config for clearing. */
+            /* Flag the config for clearing. */
             $this->clearConfig = $configs;
+
             return;
         }
 
-        /** If no valid operations were found, show a message that indicates such. */
+        /* If no valid operations were found, show a message that indicates such. */
         $this->output(
-            "Invalid or no operation specified. Use --help for possible operations.",
+            'Invalid or no operation specified. Use --help for possible operations.',
             self::OUTPUT_LEVEL_WARNING,
             true
         );
@@ -227,36 +235,43 @@ class Cli
     {
         if ($this->showVersion) {
             $this->showVersion();
+
             return;
         }
 
         if ($this->help) {
             $this->help();
+
             return;
         }
 
         if (!empty($this->addRewrite)) {
             $this->addRewrite();
+
             return;
         }
 
         if (!empty($this->addDefaultValue)) {
             $this->addDefaultValue();
+
             return;
         }
 
         if (!empty($this->setEnv)) {
             $this->setEnv();
+
             return;
         }
 
         if ($this->clearCaches) {
             $this->clearCache();
+
             return;
         }
 
         if ($this->clearConfig) {
             $this->clearConfig();
+
             return;
         }
     }
@@ -270,10 +285,10 @@ class Cli
      */
     protected function getCurrentVersion() : string
     {
-        $this->output("Outputting current version.", self::OUTPUT_LEVEL_NOTICE);
+        $this->output('Outputting current version.', self::OUTPUT_LEVEL_NOTICE);
 
-        /** Get the composer.json file and parse it to find the current package's version. */
-        $composerJson = file_get_contents(dirname(dirname(dirname(__FILE__))) . DIRECTORY_SEPARATOR . 'composer.json');
+        /* Get the composer.json file and parse it to find the current package's version. */
+        $composerJson = file_get_contents(dirname(dirname(dirname(__FILE__))).DIRECTORY_SEPARATOR.'composer.json');
         $composerJson = json_decode($composerJson, true);
         $this->output("Version parsed from composer.json: {$composerJson['version']}", self::OUTPUT_LEVEL_NOTICE);
 
@@ -303,7 +318,7 @@ VERSION;
     protected function help()
     {
         // @codingStandardsIgnoreStart
-        /** Ignoring PHP CS, because of line length limitations. */
+        /* Ignoring PHP CS, because of line length limitations. */
         $this->showVersion();
         echo <<<USAGE
 
@@ -328,8 +343,8 @@ USAGE;
     {
         $rewrite = $this->addRewrite;
 
-        $config = $this->container->create("Di\\Config\\Rewrites");
-        $this->output("Rewriting class: " . key($rewrite) . " to: " . current($rewrite), self::OUTPUT_LEVEL_NOTICE);
+        $config = $this->container->create('Di\\Config\\Rewrites');
+        $this->output('Rewriting class: '.key($rewrite).' to: '.current($rewrite), self::OUTPUT_LEVEL_NOTICE);
         $config->addRewrite($rewrite)->saveConfig();
     }
 
@@ -339,12 +354,12 @@ USAGE;
     protected function addDefaultValue()
     {
         $defaultValue = $this->addDefaultValue;
-        $config = $this->container->create("Di\\Config\\DefaultValues");
+        $config = $this->container->create('Di\\Config\\DefaultValues');
 
-        /** Loop through all new default values and add them individually. */
+        /* Loop through all new default values and add them individually. */
         foreach ($defaultValue as $className => $parameters) {
-            $this->output("Adding default value for class: " . $className, self::OUTPUT_LEVEL_NOTICE);
-            $this->output("Default values: " . var_export($parameters, true), self::OUTPUT_LEVEL_NOTICE);
+            $this->output('Adding default value for class: '.$className, self::OUTPUT_LEVEL_NOTICE);
+            $this->output('Default values: '.var_export($parameters, true), self::OUTPUT_LEVEL_NOTICE);
             $config->addDefaultValue($className, $parameters);
         }
 
@@ -359,7 +374,7 @@ USAGE;
         $env = $this->setEnv;
 
         /** @var \Di\Config\Application $config */
-        $config = $this->container->create("Di\\Config\\Application");
+        $config = $this->container->create('Di\\Config\\Application');
         $config->setEnv($env);
         $config->saveConfig();
     }
@@ -372,17 +387,17 @@ USAGE;
     protected function clearCache()
     {
         /** @var Config\Caches $config */
-        $config = $this->container->create("Di\\Config\\Caches");
+        $config = $this->container->create('Di\\Config\\Caches');
 
         $cachesToClear = $this->clearCaches;
 
-        /** If no specific cache was requested, get a list of all caches that can be cleared. */
+        /* If no specific cache was requested, get a list of all caches that can be cleared. */
         if (!is_array($cachesToClear)) {
-            $this->output("Clearing all caches.", self::OUTPUT_LEVEL_NOTICE);
+            $this->output('Clearing all caches.', self::OUTPUT_LEVEL_NOTICE);
             $cachesToClear = array_keys($config->data);
         }
 
-        /** Clear each cache type. */
+        /* Clear each cache type. */
         foreach ($cachesToClear as $cacheType) {
             $this->clearCacheType($config, $cacheType);
         }
@@ -392,13 +407,13 @@ USAGE;
      * Clear the specified cache.
      *
      * @param Config\Caches $config
-     * @param string $cacheType
+     * @param string        $cacheType
      *
      * @throws Cli\Exception
      */
     protected function clearCacheType(Config\Caches $config, string $cacheType)
     {
-        $this->output("Clearing cache type: " . $cacheType, self::OUTPUT_LEVEL_NOTICE);
+        $this->output('Clearing cache type: '.$cacheType, self::OUTPUT_LEVEL_NOTICE);
         if (!isset($config->data[$cacheType])) {
             throw new Cli\Exception("Unknown cache type requested: {$cacheType}.");
         }
@@ -408,7 +423,7 @@ USAGE;
         /** @var \Di\Cache\AbstractCache $cacheToClear */
         $cacheToClear = $this->container->create($className);
         $cacheToClear->clear(true);
-        $this->output("Cache type cleared: " . $cacheType, self::OUTPUT_LEVEL_NOTICE);
+        $this->output('Cache type cleared: '.$cacheType, self::OUTPUT_LEVEL_NOTICE);
     }
 
     /**
@@ -417,17 +432,17 @@ USAGE;
     protected function clearConfig()
     {
         /** @var Config\Configs $config */
-        $config = $this->container->create("Di\\Config\\Configs");
+        $config = $this->container->create('Di\\Config\\Configs');
 
         $configsToClear = $this->clearConfig;
 
-        /** If no specific config was requested, get a list of all configs that can be cleared. */
+        /* If no specific config was requested, get a list of all configs that can be cleared. */
         if (!is_array($configsToClear)) {
-            $this->output("Clearing all configs.", self::OUTPUT_LEVEL_NOTICE);
+            $this->output('Clearing all configs.', self::OUTPUT_LEVEL_NOTICE);
             $configsToClear = array_keys($config->data);
         }
 
-        /** Clear each config type. */
+        /* Clear each config type. */
         foreach ($configsToClear as $configType) {
             $this->clearConfigType($config, $configType);
         }
@@ -437,13 +452,13 @@ USAGE;
      * Clear the specified config.
      *
      * @param Config\Configs $config
-     * @param string $configType
+     * @param string         $configType
      *
      * @throws Cli\Exception
      */
     protected function clearConfigType(Config\Configs $config, string $configType)
     {
-        $this->output("Clearing config type: " . $configType, self::OUTPUT_LEVEL_NOTICE);
+        $this->output('Clearing config type: '.$configType, self::OUTPUT_LEVEL_NOTICE);
         if (!isset($config->data[$configType])) {
             throw new Cli\Exception("Unknown config type requested: {$configType}.");
         }
@@ -453,9 +468,9 @@ USAGE;
         /** @var \Di\Config\AbstractConfig $configToClear */
         $configToClear = $this->container->create($className);
 
-        $configToClear->data = $this->container->create("\\StdCLass");
+        $configToClear->data = $this->container->create('\\StdCLass');
         $configToClear->saveConfig();
-        $this->output("Config type cleared: " . $configType, self::OUTPUT_LEVEL_NOTICE);
+        $this->output('Config type cleared: '.$configType, self::OUTPUT_LEVEL_NOTICE);
     }
 
     /**
@@ -473,7 +488,7 @@ USAGE;
             return;
         }
 
-        /** Determine the text colour for the specified output level. */
+        /* Determine the text colour for the specified output level. */
         $colour = "\033[34m";
         switch ($level) {
             case self::OUTPUT_LEVEL_NOTICE:
@@ -487,6 +502,6 @@ USAGE;
                 break;
         }
 
-        echo $colour . $text . "\033[0m" . PHP_EOL;
+        echo $colour.$text."\033[0m".PHP_EOL;
     }
 }

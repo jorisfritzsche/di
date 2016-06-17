@@ -5,8 +5,7 @@
  * @license MIT
  * @author Joris Fritzsche (joris.fritzsche@outlook.com)
  */
-
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Di\Config;
 
@@ -31,6 +30,7 @@ class DefaultValues extends AbstractConfig
         }
 
         $this->data[$className] = $defaultValue;
+
         return $this;
     }
 
@@ -59,16 +59,15 @@ class DefaultValues extends AbstractConfig
      * @param string $parameterName
      *
      * @return false|mixed
-     *
      */
     public function getDefaultDiValue(string $className, string $parameterName)
     {
-        /** Get the parameter's declaring class' class name and make sure it starts in the root namespace. */;
+        /* Get the parameter's declaring class' class name and make sure it starts in the root namespace. */
         if (strpos($className, '\\') !== 0) {
-            $className = '\\' . $className;
+            $className = '\\'.$className;
         }
 
-        /** Check if a default value is defined for this parameter and return it. */
+        /* Check if a default value is defined for this parameter and return it. */
         $defaultValues = $this->data;
         if (isset($defaultValues[$className][$parameterName])) {
             return $defaultValues[$className][$parameterName];

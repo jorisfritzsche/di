@@ -5,8 +5,7 @@
  * @license MIT
  * @author Joris Fritzsche (joris.fritzsche@outlook.com)
  */
-
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Di\FileLoader;
 
@@ -30,7 +29,7 @@ class Json implements FileLoaderInterface
     public function __construct()
     {
         $this->setDirectory(
-            dirname(dirname(dirname(dirname(__FILE__)))) . DIRECTORY_SEPARATOR . 'etc' . DIRECTORY_SEPARATOR
+            dirname(dirname(dirname(dirname(__FILE__)))).DIRECTORY_SEPARATOR.'etc'.DIRECTORY_SEPARATOR
         );
     }
 
@@ -53,13 +52,13 @@ class Json implements FileLoaderInterface
      *
      * @param string $file
      *
-     * @return array
-     *
      * @throws Exception
+     *
+     * @return array
      */
     public function load(string $file) : array
     {
-        $filePath = $this->directory . $file;
+        $filePath = $this->directory.$file;
 
         if (!is_readable($filePath)) {
             throw new Exception("File {$file} is not readable.");
@@ -88,9 +87,9 @@ class Json implements FileLoaderInterface
      * @param string $file
      * @param mixed  $data
      *
-     * @return Json
-     *
      * @throws Exception
+     *
+     * @return Json
      */
     public function save(string $file, $data) : self
     {
@@ -98,7 +97,7 @@ class Json implements FileLoaderInterface
             $data = json_encode($data, JSON_PRETTY_PRINT | JSON_FORCE_OBJECT);
         }
 
-        $filePath = $this->directory . $file;
+        $filePath = $this->directory.$file;
         if (!is_writable($filePath)) {
             throw new Exception("File {$file} is not readable.");
         }
