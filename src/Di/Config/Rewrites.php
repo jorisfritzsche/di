@@ -5,8 +5,7 @@
  * @license MIT
  * @author Joris Fritzsche (joris.fritzsche@outlook.com)
  */
-
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Di\Config;
 
@@ -55,13 +54,13 @@ class Rewrites extends AbstractConfig
      */
     public function processRewrites(string $type)
     {
-        /** Get the type's class name and make sure it starts in the root namespace. */
+        /* Get the type's class name and make sure it starts in the root namespace. */
         $stringType = $type;
         if (strpos($stringType, '\\') !== 0) {
-            $stringType = '\\' . $stringType;
+            $stringType = '\\'.$stringType;
         }
 
-        /** Check for any rewrites and return the rewritten class name if available. */
+        /* Check for any rewrites and return the rewritten class name if available. */
         if (isset($this->data[$stringType])) {
             $type = $this->data[$stringType];
         }

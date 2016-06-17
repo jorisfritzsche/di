@@ -5,8 +5,7 @@
  * @license MIT
  * @author Joris Fritzsche (joris.fritzsche@outlook.com)
  */
-
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Di\Tests;
 
@@ -38,7 +37,7 @@ class ContainerTest extends \PHPUnit_Framework_TestCase
 
     public function testCreateMethodCallable()
     {
-        $methodExists = is_callable(array($this->className, 'create'));
+        $methodExists = is_callable([$this->className, 'create']);
         $this->assertTrue($methodExists);
     }
 
@@ -117,8 +116,8 @@ class ContainerTest extends \PHPUnit_Framework_TestCase
     public function testCreateClass()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
-        $class = $container->create("\\Di\\Tests\\TestClasses\\TestA", [], $container::FLAG_NO_CACHE);
+        $container = new $this->className();
+        $class = $container->create('\\Di\\Tests\\TestClasses\\TestA', [], $container::FLAG_NO_CACHE);
 
         $this->assertTrue($class instanceof TestA);
     }
@@ -126,8 +125,8 @@ class ContainerTest extends \PHPUnit_Framework_TestCase
     public function testCreateClassWithConstructor()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
-        $class = $container->create("\\Di\\Tests\\TestClasses\\TestB", [], $container::FLAG_NO_CACHE);
+        $container = new $this->className();
+        $class = $container->create('\\Di\\Tests\\TestClasses\\TestB', [], $container::FLAG_NO_CACHE);
 
         $this->assertTrue($class instanceof TestB);
         $this->assertTrue($class->a instanceof TestA);
@@ -136,10 +135,10 @@ class ContainerTest extends \PHPUnit_Framework_TestCase
     public function testCreateClassWithConstructorAndGivenArgument()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
+        $container = new $this->className();
 
-        $testC = $container->create("\\Di\\Tests\\TestClasses\\TestC", [], $container::FLAG_NO_CACHE);
-        $class = $container->create("\\Di\\Tests\\TestClasses\\TestB", ['a' => $testC], $container::FLAG_NO_CACHE);
+        $testC = $container->create('\\Di\\Tests\\TestClasses\\TestC', [], $container::FLAG_NO_CACHE);
+        $class = $container->create('\\Di\\Tests\\TestClasses\\TestB', ['a' => $testC], $container::FLAG_NO_CACHE);
 
         $this->assertTrue($testC instanceof TestC);
         $this->assertTrue($testC instanceof TestA);
@@ -151,14 +150,14 @@ class ContainerTest extends \PHPUnit_Framework_TestCase
     public function testCreateSingletonClass()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
+        $container = new $this->className();
         $classA = $container->create(
-            "\\Di\\Tests\\TestClasses\\TestA",
+            '\\Di\\Tests\\TestClasses\\TestA',
             [],
             $container::FLAG_SINGLETON | $container::FLAG_NO_CACHE
         );
         $classB = $container->create(
-            "\\Di\\Tests\\TestClasses\\TestA",
+            '\\Di\\Tests\\TestClasses\\TestA',
             [],
             $container::FLAG_SINGLETON | $container::FLAG_NO_CACHE
         );
@@ -172,10 +171,10 @@ class ContainerTest extends \PHPUnit_Framework_TestCase
     public function testRewrite()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
-        $container->rewrites->addRewrite(["\\Di\\Tests\\TestClasses\\TestA" => "\\Di\\Tests\\TestClasses\\TestC"]);
+        $container = new $this->className();
+        $container->rewrites->addRewrite(['\\Di\\Tests\\TestClasses\\TestA' => '\\Di\\Tests\\TestClasses\\TestC']);
 
-        $class = $container->create("\\Di\\Tests\\TestClasses\\TestA", [], $container::FLAG_NO_CACHE);
+        $class = $container->create('\\Di\\Tests\\TestClasses\\TestA', [], $container::FLAG_NO_CACHE);
 
         $this->assertTrue($class instanceof TestC);
         $this->assertTrue($class instanceof TestA);
@@ -184,33 +183,33 @@ class ContainerTest extends \PHPUnit_Framework_TestCase
     public function testDefaultValue()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
-        $container->defaultValues->addDefaultValue("\\Di\\Tests\\TestClasses\\TestD", ["scalarValue" => "test_value"]);
+        $container = new $this->className();
+        $container->defaultValues->addDefaultValue('\\Di\\Tests\\TestClasses\\TestD', ['scalarValue' => 'test_value']);
 
-        $class = $container->create("\\Di\\Tests\\TestClasses\\TestD", [], $container::FLAG_NO_CACHE);
+        $class = $container->create('\\Di\\Tests\\TestClasses\\TestD', [], $container::FLAG_NO_CACHE);
 
         $this->assertTrue($class instanceof TestD);
-        $this->assertSame($class->scalarValue, "test_value");
+        $this->assertSame($class->scalarValue, 'test_value');
     }
 
     public function testMissingValue()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
+        $container = new $this->className();
 
-        $this->expectException("\\Di\\Exception");
+        $this->expectException('\\Di\\Exception');
 
-        $container->create("\\Di\\Tests\\TestClasses\\TestD", [], $container::FLAG_NO_CACHE);
+        $container->create('\\Di\\Tests\\TestClasses\\TestD', [], $container::FLAG_NO_CACHE);
     }
 
     public function testCache()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
+        $container = new $this->className();
 
-        $container->cache->store("Di\\Tests\\TestClasses\\TestB", ['a' => "\\Di\\Tests\\TestClasses\\TestC"]);
+        $container->cache->store('Di\\Tests\\TestClasses\\TestB', ['a' => '\\Di\\Tests\\TestClasses\\TestC']);
 
-        $class = $container->create("\\Di\\Tests\\TestClasses\\TestB");
+        $class = $container->create('\\Di\\Tests\\TestClasses\\TestB');
         $this->assertTrue($class instanceof TestB);
         $this->assertTrue($class->a instanceof TestC);
         $this->assertTrue($class->a instanceof TestA);
@@ -219,11 +218,11 @@ class ContainerTest extends \PHPUnit_Framework_TestCase
     public function testNoCacheFlag()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
+        $container = new $this->className();
 
-        $container->cache->store("Di\\Tests\\TestClasses\\TestB", ['a' => "\\Di\\Tests\\TestClasses\\TestC"]);
+        $container->cache->store('Di\\Tests\\TestClasses\\TestB', ['a' => '\\Di\\Tests\\TestClasses\\TestC']);
 
-        $class = $container->create("\\Di\\Tests\\TestClasses\\TestB", [], $container::FLAG_NO_CACHE);
+        $class = $container->create('\\Di\\Tests\\TestClasses\\TestB', [], $container::FLAG_NO_CACHE);
         $this->assertTrue($class instanceof TestB);
         $this->assertFalse($class->a instanceof TestC);
         $this->assertTrue($class->a instanceof TestA);
@@ -232,46 +231,46 @@ class ContainerTest extends \PHPUnit_Framework_TestCase
     public function testNonExistingClass()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
+        $container = new $this->className();
 
-        $this->expectException("\\Di\\Exception");
-        $this->expectExceptionMessage("Class SomeNonExistingClass does not exist.");
+        $this->expectException('\\Di\\Exception');
+        $this->expectExceptionMessage('Class SomeNonExistingClass does not exist.');
 
-        $container->create("SomeNonExistingClass", [], $container::FLAG_NO_CACHE);
+        $container->create('SomeNonExistingClass', [], $container::FLAG_NO_CACHE);
     }
 
     public function testIncludeLoop()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
+        $container = new $this->className();
 
-        $this->expectException("\\Di\\Exception");
+        $this->expectException('\\Di\\Exception');
         $this->expectExceptionMessage(
-            "Class Di\\Tests\\TestClasses\\TestE is already being processed. This probably means that one or more"
-            . " classes require each other, causing an infinite loop."
+            'Class Di\\Tests\\TestClasses\\TestE is already being processed. This probably means that one or more'
+            .' classes require each other, causing an infinite loop.'
         );
 
-        $container->create("\\Di\\Tests\\TestClasses\\TestE", [], $container::FLAG_NO_CACHE);
+        $container->create('\\Di\\Tests\\TestClasses\\TestE', [], $container::FLAG_NO_CACHE);
     }
 
     public function testNonInstantiableClass()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
+        $container = new $this->className();
 
-        $this->expectException("\\Di\\Exception");
-        $this->expectExceptionMessage("Class \\Di\\Tests\\TestClasses\\TestF is not instantiable.");
+        $this->expectException('\\Di\\Exception');
+        $this->expectExceptionMessage('Class \\Di\\Tests\\TestClasses\\TestF is not instantiable.');
 
-        $container->create("\\Di\\Tests\\TestClasses\\TestF", [], $container::FLAG_NO_CACHE);
+        $container->create('\\Di\\Tests\\TestClasses\\TestF', [], $container::FLAG_NO_CACHE);
     }
 
     public function testDefaultParameterValue()
     {
         /** @var \Di\Container $container */
-        $container = new $this->className;
+        $container = new $this->className();
 
-        $class = $container->create("\\Di\\Tests\\TestClasses\\TestG", [], $container::FLAG_NO_CACHE);
+        $class = $container->create('\\Di\\Tests\\TestClasses\\TestG', [], $container::FLAG_NO_CACHE);
 
-        $this->assertSame($class->g, "default_value");
+        $this->assertSame($class->g, 'default_value');
     }
 }

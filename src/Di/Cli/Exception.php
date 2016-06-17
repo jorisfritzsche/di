@@ -5,8 +5,7 @@
  * @license MIT
  * @author Joris Fritzsche (joris.fritzsche@outlook.com)
  */
-
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Di\Cli;
 
@@ -17,5 +16,4 @@ namespace Di\Cli;
  */
 class Exception extends \Di\Exception
 {
-
 }

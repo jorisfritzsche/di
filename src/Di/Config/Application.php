@@ -5,8 +5,7 @@
  * @license MIT
  * @author Joris Fritzsche (joris.fritzsche@outlook.com)
  */
-
-declare(strict_types = 1);
+declare(strict_types=1);
 
 namespace Di\Config;
 
@@ -23,7 +22,8 @@ class Application extends AbstractConfig
 
     /**
      * Application constructor.
-     * @param Json $fileLoader
+     *
+     * @param Json         $fileLoader
      * @param Environments $environments
      */
     public function __construct(Json $fileLoader, Environments $environments)
@@ -36,16 +36,16 @@ class Application extends AbstractConfig
     /**
      * @param string $env
      *
-     * @return self
-     *
      * @throws \Exception
+     *
+     * @return self
      */
     public function setEnv(string $env) : self
     {
-        /** Get the available environments. */
+        /* Get the available environments. */
         $availableEnvironments = array_keys($this->environments->data);
         if (!in_array($env, $availableEnvironments)) {
-            /**
+            /*
              * If the desired environment is not available, throw an exception with information on which environments
              * are available.
              */
@@ -55,8 +55,9 @@ class Application extends AbstractConfig
             );
         }
 
-        /** Set the environment. */
+        /* Set the environment. */
         $this->data['env'] = $env;
+
         return $this;
     }
 }
